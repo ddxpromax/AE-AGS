@@ -15,7 +15,28 @@ This folder contains a minimal, runnable reproduction of the core AE-AGS idea fr
 
 ```bash
 cd /root/AE-AGS
-python run_experiment.py --N 5 --K 5 --T 20000 --delta 0.1 --runs 3
+python run_experiment.py --preset quick
+```
+
+## One-Command Paper Default
+
+Use the paper-style default scale (N=5, K=5, T=100000, runs=20):
+
+```bash
+cd /root/AE-AGS
+./run_paper_default.sh
+```
+
+You can still override fields, for example:
+
+```bash
+./run_paper_default.sh --runs 5
+```
+
+## Config-Driven Run
+
+```bash
+python run_experiment.py --preset paper_default --config configs/paper_default.json
 ```
 
 ## Notes
