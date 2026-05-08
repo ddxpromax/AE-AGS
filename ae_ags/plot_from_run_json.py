@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 
 def _get_algorithms(summary: Dict[str, Any], requested: List[str] | None) -> List[str]:
@@ -18,19 +18,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-json", type=str, required=True, help="Path to run_experiment --save-json output")
     parser.add_argument("--output-dir", type=str, default=None, help="Directory for generated plots")
-    parser.add_argument(
-        "--algs",
-        type=str,
-        default=None,
-        help="Comma-separated algorithms to plot, e.g. AE-AGS,C-ETC,P-ETC",
-    )
+    parser.add_argument("--algs", type=str, default=None, help="Comma-separated algorithms to plot")
     args = parser.parse_args()
 
     in_path = Path(args.input_json)
     payload = json.loads(in_path.read_text(encoding="utf-8"))
     summary: Dict[str, Any] = payload["summary"]
     cfg: Dict[str, Any] = payload.get("config", {})
-
     req_algs = [s.strip() for s in args.algs.split(",")] if args.algs else None
     algs = _get_algorithms(summary, req_algs)
 
@@ -42,23 +36,18 @@ def main() -> None:
     except Exception as e:
         raise RuntimeError(f"matplotlib required for plotting: {e}") from e
 
-    # Validate curve availability.
     with_curve = [a for a in algs if "curve" in summary[a]]
     if not with_curve:
         raise ValueError("No curve data found in input JSON. Run with --record-every > 0 first.")
-
     steps = summary[with_curve[0]]["curve"]["steps"]
 
-    # 1) Max cumulative stable regret curve
     plt.figure(figsize=(8, 4.5))
     for a in with_curve:
         c = summary[a]["curve"]
         y = c["max_stable_regret_mean"]
         se = c["max_stable_regret_se"]
         plt.plot(steps, y, label=a)
-        lo = [yy - ss for yy, ss in zip(y, se)]
-        hi = [yy + ss for yy, ss in zip(y, se)]
-        plt.fill_between(steps, lo, hi, alpha=0.15)
+        plt.fill_between(steps, [yy - ss for yy, ss in zip(y, se)], [yy + ss for yy, ss in zip(y, se)], alpha=0.15)
     plt.xlabel("Round t")
     plt.ylabel("Max Cumulative Stable Regret")
     plt.title("Run Curves: Max Stable Regret")
@@ -68,16 +57,13 @@ def main() -> None:
     plt.savefig(p1, dpi=150)
     plt.close()
 
-    # 2) Market unstability curve
     plt.figure(figsize=(8, 4.5))
     for a in with_curve:
         c = summary[a]["curve"]
         y = c["unstability_mean"]
         se = c["unstability_se"]
         plt.plot(steps, y, label=a)
-        lo = [yy - ss for yy, ss in zip(y, se)]
-        hi = [yy + ss for yy, ss in zip(y, se)]
-        plt.fill_between(steps, lo, hi, alpha=0.15)
+        plt.fill_between(steps, [yy - ss for yy, ss in zip(y, se)], [yy + ss for yy, ss in zip(y, se)], alpha=0.15)
     plt.xlabel("Round t")
     plt.ylabel("Cumulative Market Unstability")
     plt.title("Run Curves: Market Unstability")
@@ -87,10 +73,8 @@ def main() -> None:
     plt.savefig(p2, dpi=150)
     plt.close()
 
-    # Optional text summary for quick glance.
     summary_txt = out_dir / "run_curve_summary.txt"
-    lines = []
-    lines.append("Config:")
+    lines = ["Config:"]
     for k in sorted(cfg.keys()):
         lines.append(f"- {k}: {cfg[k]}")
     lines.append("")
@@ -103,9 +87,9 @@ def main() -> None:
             f"unstability={s['cumulative_market_unstability']:.4f}"
         )
     summary_txt.write_text("\n".join(lines), encoding="utf-8")
-
     print(f"Saved plots:\n- {p1}\n- {p2}\nSaved text summary:\n- {summary_txt}")
 
 
 if __name__ == "__main__":
     main()
+

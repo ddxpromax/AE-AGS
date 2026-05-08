@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 import numpy as np
 
-from run_experiment import run_one_repeat
-
+from .run_experiment import run_one_repeat
 
 ALG_NAMES = ["AE-AGS", "C-ETC", "P-ETC", "Random"]
 
@@ -32,8 +31,7 @@ def run_setting(
     unstable: Dict[str, List[float]] = {k: [] for k in ALG_NAMES}
 
     if jobs <= 1:
-        iterator = range(runs)
-        for r in iterator:
+        for r in range(runs):
             one = run_one_repeat(
                 n_players,
                 n_arms,
@@ -95,7 +93,6 @@ def maybe_plot(output_dir: Path, data: Dict[str, Any]) -> None:
         print("matplotlib not available; skip plots.")
         return
 
-    # Delta sweep plots
     delta_vals = data["delta_sweep"]["delta_values"]
     delta_results = data["delta_sweep"]["results"]
     for metric, fname in [
@@ -114,7 +111,6 @@ def maybe_plot(output_dir: Path, data: Dict[str, Any]) -> None:
         plt.savefig(output_dir / fname, dpi=150)
         plt.close()
 
-    # Size sweep plots
     n_vals = data["size_sweep"]["sizes"]
     size_results = data["size_sweep"]["results"]
     for metric, fname in [
@@ -150,13 +146,11 @@ def main() -> None:
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-
     clip_rewards = bool(args.clip_rewards)
     rectify_regret = bool(args.rectify_regret)
 
     delta_values = [0.1, 0.15, 0.2, 0.25]
     size_values = [3, 6, 9, 12]
-
     payload: Dict[str, Any] = {
         "meta": {
             "generated_at": datetime.now(UTC).isoformat(),
@@ -222,3 +216,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

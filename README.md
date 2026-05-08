@@ -1,124 +1,113 @@
-# AE-AGS Reproduction (Minimal)
+# AE-AGS Reproduction Project
 
-This folder contains a minimal, runnable reproduction of the core AE-AGS idea from:
+Reproduction workspace for:
 
 > *Bandit Learning in Matching Markets with Indifference* (ICLR 2025)
 
-## Files
+This repo focuses on:
+- centralized AE-AGS implementation,
+- paper-scale experiment execution,
+- Appendix E sweep automation,
+- result export (JSON + figures).
 
-- `market.py`: matching market simulator with indifference and stability checker.
-- `aeags_centralized.py`: centralized AE-AGS core logic (Algorithm 1/2/3 style).
-- `baselines.py`: baseline implementations (`CETCKnownDelta`, `PhasedETC`, `RandomMatchingPolicy`).
-- `run_experiment.py`: run toy experiments and print cumulative stable regret / unstability.
+---
+
+## Project Layout
+
+### Core code
+- `ae_ags/`: main Python package (all core implementation now lives here).
+- `ae_ags/market.py`: matching market simulator, stability checking, synthetic data generation.
+- `ae_ags/aeags_centralized.py`: centralized AE-AGS (Algorithm 1/2/3 style).
+- `ae_ags/baselines.py`: baselines (`CETCKnownDelta`, `PhasedETC`, `RandomMatchingPolicy`).
+- `ae_ags/run_experiment.py`: single-setting experiment runner (supports presets, parallel runs, JSON export, trajectories).
+- `ae_ags/sweep_appendix_e.py`: full Appendix E sweep runner.
+- `ae_ags/plot_from_run_json.py`: plot curves from `run_experiment.py --save-json` output.
+
+### Config / scripts
+- `configs/paper_default.json`: default paper-scale config.
+- `run_paper_default.sh`: one-command paper default run.
+- `run_appendix_e.sh`: one-command Appendix E sweep run.
+
+### Outputs
+- `results/paper_run/`: paper default run outputs.
+- `results/appendix_e_full/`: Appendix E sweep outputs.
+
+### Reference material
+- `2409_Bandit_Learning_in_Matchi.pdf`
+- `2409_Bandit_Learning_in_Matchi_extracted.txt`
+
+---
 
 ## Quick Start
 
 ```bash
 cd /root/AE-AGS
-python run_experiment.py --preset quick
+python -m ae_ags.run_experiment --preset quick
 ```
 
-## Terminal Command Cheat Sheet
+---
 
-Copy-paste commands (no need to memorize parameters):
+## Recommended Workflows
 
+### 1) Paper default (raw, paper-aligned)
 ```bash
-# 1) Quick sanity run (small/fast)
-cd /root/AE-AGS
-python run_experiment.py --preset quick
-
-# 2) Paper default (raw, strict setting)
-./run_paper_default.sh
-
-# 3) Paper default + parallel workers (faster)
-./run_paper_default.sh --runs 20 --jobs 8
-
-# 4) Non-negative display mode (engineering view)
-python run_experiment.py --preset paper_clean --jobs 8
-
-# 5) Run Appendix-E sweeps (delta + market-size)
-./run_appendix_e.sh
-
-# 6) Save one run to JSON file
-python run_experiment.py --preset paper_default --jobs 8 --save-json results/one_run.json
-
-# 6.1) Save run JSON with trajectory samples every 1000 rounds
-python run_experiment.py --preset paper_default --jobs 8 --record-every 1000 --save-json results/one_run_curve.json
-
-# 6.2) Plot paper-style curves from saved JSON
-python plot_from_run_json.py --input-json results/one_run_curve.json
-
-# 7) Git push current branch
-git add .
-git commit -m "update experiments"
-git push
-```
-
-## One-Command Paper Default (Raw, Paper-Aligned)
-
-Use the paper-style default scale (N=5, K=5, T=100000, runs=20):
-
-```bash
-cd /root/AE-AGS
 ./run_paper_default.sh
 ```
 
-You can still override fields, for example:
-
-```bash
-./run_paper_default.sh --runs 5
-```
-
-Run in parallel across independent repeats:
-
+With explicit parallelism:
 ```bash
 ./run_paper_default.sh --runs 20 --jobs 8
 ```
 
-## Config-Driven Run
-
+### 2) Save trajectory JSON for plotting
 ```bash
-python run_experiment.py --preset paper_default --config configs/paper_default.json
+python -m ae_ags.run_experiment \
+  --preset paper_default \
+  --runs 20 --jobs 8 \
+  --record-every 1000 \
+  --save-json results/paper_run/one_run_curve.json
 ```
 
-The default synthetic market model is `paper_rank` (rank-position mapped utilities, closer to Appendix E text).
-
-## Appendix E Sweeps (One Command)
-
-Run both sweeps from Appendix E:
-
+### 3) Plot from saved JSON
 ```bash
-cd /root/AE-AGS
+python -m ae_ags.plot_from_run_json \
+  --input-json results/paper_run/one_run_curve.json \
+  --output-dir results/paper_run/plots
+```
+
+### 4) Full Appendix E sweep
+```bash
 ./run_appendix_e.sh
 ```
 
-Artifacts are saved under `results/`:
-- `appendix_e_sweeps.json`
-- `delta_sweep_max_stable_regret.png`
-- `delta_sweep_unstability.png`
-- `size_sweep_max_stable_regret.png`
-- `size_sweep_unstability.png`
+---
 
-## About Negative Rewards / Regrets
+## Notes on Metrics
 
-By default (`paper_default`), this repo now uses paper-aligned raw settings:
-
-- `clip_rewards=0`
-- `rectify_regret=0`
-
-So negative sampled rewards / cumulative regrets can appear and are expected.
-
-If you want a cleaned-up non-negative reporting style, use:
-
+- `paper_default` uses raw paper-style settings:
+  - `clip_rewards=0`
+  - `rectify_regret=0`
+- Negative sampled rewards / cumulative regrets can therefore appear and are expected.
+- For an engineering-style non-negative view:
 ```bash
-python run_experiment.py --preset paper_clean
+python -m ae_ags.run_experiment --preset paper_clean
 ```
 
-## Notes
+---
 
-- This is a **minimal reproduction scaffold** focused on correctness and executability.
-- Baselines are practical reproductions aimed to be closer to paper-style C-ETC / phased ETC behavior, but still not a line-by-line reimplementation of every original paper detail.
-- Next step for strict paper-level reproduction is to add:
+## Documentation
+
+- `docs/PROJECT_MAP.md`: architecture and file responsibilities.
+- `docs/COMMANDS.md`: copy-paste command handbook.
+- `Makefile`: short aliases (`make quick`, `make paper-j8`, `make sweep`).
+
+---
+
+## Current Scope
+
+- Baselines are practical reproductions designed to be closer to paper behavior.
+- This is not yet a line-by-line full reimplementation of every paper baseline detail.
+- Future work:
   - decentralized AE-AGS (Algorithm 4/5),
-  - exact phase/communication protocol,
-  - same plotting and statistical protocol as Appendix E.
+  - deeper protocol-level alignment for all baselines,
+  - additional reproducibility tooling (seeded manifests / run registry).

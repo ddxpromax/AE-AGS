@@ -125,3 +125,4 @@ class AEAGSCentralized:
             new_c = c + 1
             self.state.mu_hat[i, a] = (self.state.mu_hat[i, a] * c + rewards[i]) / new_c
             self.state.counts[i, a] = new_c
+
