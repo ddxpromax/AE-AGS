@@ -1,0 +1,19 @@
+Config:
+- K: 5
+- N: 5
+- T: 100000
+- clip_rewards: 0
+- delta: 0.1
+- jobs: 8
+- market_model: paper_rank
+- record_every: 1000
+- rectify_regret: 0
+- runs: 20
+- seed: 0
+- sigma: 1.0
+
+Final metrics (from summary):
+- AE-AGS: max_regret=-228.5678, mean_regret=-2598.9841, unstability=73604.0500
+- C-ETC: max_regret=2646.7884, mean_regret=-398.6037, unstability=90709.8500
+- P-ETC: max_regret=-1493.2715, mean_regret=-4113.0878, unstability=60191.8500
+- Random: max_regret=2618.3422, mean_regret=-1021.5260, unstability=93009.5500

@@ -1,5 +1,6 @@
 __pycache__/
 *.py[cod]
-results/
 results_smoke/
 results_smoke2/
+results_smoke3/
+results_smoke4/
