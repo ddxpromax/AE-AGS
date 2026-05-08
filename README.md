@@ -18,6 +18,36 @@ cd /root/AE-AGS
 python run_experiment.py --preset quick
 ```
 
+## Terminal Command Cheat Sheet
+
+Copy-paste commands (no need to memorize parameters):
+
+```bash
+# 1) Quick sanity run (small/fast)
+cd /root/AE-AGS
+python run_experiment.py --preset quick
+
+# 2) Paper default (raw, strict setting)
+./run_paper_default.sh
+
+# 3) Paper default + parallel workers (faster)
+./run_paper_default.sh --runs 20 --jobs 8
+
+# 4) Non-negative display mode (engineering view)
+python run_experiment.py --preset paper_clean --jobs 8
+
+# 5) Run Appendix-E sweeps (delta + market-size)
+./run_appendix_e.sh
+
+# 6) Save one run to JSON file
+python run_experiment.py --preset paper_default --jobs 8 --save-json results/one_run.json
+
+# 7) Git push current branch
+git add .
+git commit -m "update experiments"
+git push
+```
+
 ## One-Command Paper Default (Raw, Paper-Aligned)
 
 Use the paper-style default scale (N=5, K=5, T=100000, runs=20):
@@ -44,6 +74,22 @@ Run in parallel across independent repeats:
 ```bash
 python run_experiment.py --preset paper_default --config configs/paper_default.json
 ```
+
+## Appendix E Sweeps (One Command)
+
+Run both sweeps from Appendix E:
+
+```bash
+cd /root/AE-AGS
+./run_appendix_e.sh
+```
+
+Artifacts are saved under `results/`:
+- `appendix_e_sweeps.json`
+- `delta_sweep_max_stable_regret.png`
+- `delta_sweep_unstability.png`
+- `size_sweep_max_stable_regret.png`
+- `size_sweep_unstability.png`
 
 ## About Negative Rewards / Regrets
 

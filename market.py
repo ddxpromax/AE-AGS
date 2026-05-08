@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Sequence, Tuple
 
 import numpy as np
 
@@ -92,22 +92,87 @@ class MatchingMarket:
                     return False
         return True
 
-    def stable_baseline_reward(self) -> np.ndarray:
+    def _gs_player_proposing(self, tie_seed: int) -> np.ndarray:
+        """
+        Compute one stable matching with player-proposing GS under random tie-breaks.
+        Returns matching m where m[i] is the matched arm of player i.
+        """
+        rng = np.random.default_rng(tie_seed)
+        arm_order = np.zeros((self.N, self.K), dtype=int)
+        for i in range(self.N):
+            # Random tie-break over equal utilities.
+            jitter = rng.uniform(0.0, 1e-9, size=self.K)
+            arm_order[i] = np.argsort(-(self.mu[i] + jitter), kind="stable")
+
+        next_idx = np.zeros(self.N, dtype=int)
+        player_match = np.full(self.N, -1, dtype=int)
+        arm_match = np.full(self.K, -1, dtype=int)
+        free = list(range(self.N))
+
+        while free:
+            i = free.pop()
+            if next_idx[i] >= self.K:
+                continue
+            a = int(arm_order[i, next_idx[i]])
+            next_idx[i] += 1
+            cur = int(arm_match[a])
+            if cur == -1:
+                arm_match[a] = i
+                player_match[i] = a
+            else:
+                rank_i = self.arm_rank[a, i]
+                rank_cur = self.arm_rank[a, cur]
+                if rank_i < rank_cur:
+                    arm_match[a] = i
+                    player_match[i] = a
+                    player_match[cur] = -1
+                    free.append(cur)
+                elif rank_i == rank_cur:
+                    # Random tie break for arm-side indifference.
+                    if rng.integers(0, 2) == 0:
+                        arm_match[a] = i
+                        player_match[i] = a
+                        player_match[cur] = -1
+                        free.append(cur)
+                    else:
+                        free.append(i)
+                else:
+                    free.append(i)
+        return player_match
+
+    def stable_baseline_reward(self, exact_cutoff: int = 8, approx_trials: int = 64) -> np.ndarray:
         """
         For each player i, baseline is min reward among all stable matchings.
-        For small N only (used in toy experiments).
+        Exact enumeration is used only for small N.
+        For larger N, approximate this minimum by sampling multiple GS stable matchings.
         """
-        from itertools import permutations
+        if self.N <= exact_cutoff and self.K <= exact_cutoff:
+            from itertools import permutations
 
+            min_reward = np.full(self.N, np.inf, dtype=float)
+            arms = list(range(self.K))
+            for picked in permutations(arms, self.N):
+                m = np.array(picked, dtype=int)
+                if self.is_stable_matching(m):
+                    min_reward = np.minimum(min_reward, self.mu[np.arange(self.N), m])
+            if np.any(~np.isfinite(min_reward)):
+                return np.zeros(self.N, dtype=float)
+            return min_reward
+
+        # Approximate large-N baseline using random tie-broken GS outcomes.
         min_reward = np.full(self.N, np.inf, dtype=float)
-        arms = list(range(self.K))
-        for picked in permutations(arms, self.N):
-            m = np.array(picked, dtype=int)
+        for t in range(max(1, approx_trials)):
+            m = self._gs_player_proposing(tie_seed=self.rng_seed + 100000 + t)
             if self.is_stable_matching(m):
                 min_reward = np.minimum(min_reward, self.mu[np.arange(self.N), m])
+
+        # Robust fallback if no sampled stable matching found.
         if np.any(~np.isfinite(min_reward)):
-            # Fallback for unexpected degenerate cases.
-            return np.zeros(self.N, dtype=float)
+            m = self._gs_player_proposing(tie_seed=self.rng_seed + 999999)
+            if self.is_stable_matching(m):
+                min_reward = self.mu[np.arange(self.N), m]
+            else:
+                min_reward = np.zeros(self.N, dtype=float)
         return min_reward
 
 

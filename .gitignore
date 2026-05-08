@@ -1,2 +1,5 @@
 __pycache__/
 *.py[cod]
+results/
+results_smoke/
+results_smoke2/

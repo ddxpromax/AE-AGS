@@ -5,7 +5,7 @@ import concurrent.futures
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Any
 
 import numpy as np
 
@@ -136,6 +136,20 @@ def summarize(name: str, result: RunResult) -> None:
     print(f"  cumulative market unstability: {result.unstable_count}")
 
 
+def _aggregate_results(agg: Dict[str, List[RunResult]]) -> Dict[str, Dict[str, Any]]:
+    out: Dict[str, Dict[str, Any]] = {}
+    for name, runs in agg.items():
+        mean_sr = np.mean([x.stable_regret for x in runs], axis=0)
+        mean_unstable = float(np.mean([x.unstable_count for x in runs]))
+        out[name] = {
+            "stable_regret_per_player": [float(v) for v in mean_sr.tolist()],
+            "max_cumulative_stable_regret": float(np.max(mean_sr)),
+            "mean_cumulative_stable_regret": float(np.mean(mean_sr)),
+            "cumulative_market_unstability": float(mean_unstable),
+        }
+    return out
+
+
 def run_one_repeat(
     n_players: int,
     n_arms: int,
@@ -194,6 +208,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--runs", type=int, default=None)
     parser.add_argument("--jobs", type=int, default=None, help="Parallel worker processes for runs.")
+    parser.add_argument("--save-json", type=str, default=None, help="Optional path to save summary JSON.")
     args = _resolve_args(parser.parse_args())
 
     alg_names = ["AE-AGS", "C-ETC(simple)", "Random"]
@@ -244,10 +259,36 @@ def main() -> None:
         f"Experiment: N={args.N}, K={args.K}, T={args.T}, delta={args.delta}, sigma={args.sigma}, "
         f"clip_rewards={int(clip_rewards)}, rectify_regret={int(rectify_regret)}, runs={args.runs}, jobs={jobs}"
     )
+    summary = _aggregate_results(agg)
     for name in alg_names:
-        mean_sr = np.mean([x.stable_regret for x in agg[name]], axis=0)
-        mean_unstable = float(np.mean([x.unstable_count for x in agg[name]]))
-        summarize(name, RunResult(stable_regret=mean_sr, unstable_count=int(mean_unstable)))
+        summarize(
+            name,
+            RunResult(
+                stable_regret=np.array(summary[name]["stable_regret_per_player"], dtype=float),
+                unstable_count=int(summary[name]["cumulative_market_unstability"]),
+            ),
+        )
+
+    if args.save_json:
+        out_path = Path(args.save_json)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "config": {
+                "N": int(args.N),
+                "K": int(args.K),
+                "T": int(args.T),
+                "delta": float(args.delta),
+                "sigma": float(args.sigma),
+                "clip_rewards": int(clip_rewards),
+                "rectify_regret": int(rectify_regret),
+                "runs": int(args.runs),
+                "jobs": int(jobs),
+                "seed": int(args.seed),
+            },
+            "summary": summary,
+        }
+        out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        print(f"Saved summary JSON to: {out_path}")
 
 
 if __name__ == "__main__":
