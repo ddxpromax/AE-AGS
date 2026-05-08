@@ -7,5 +7,7 @@
   "clip_rewards": false,
   "rectify_regret": false,
   "seed": 0,
-  "runs": 20
+  "runs": 20,
+  "record_every": 1000,
+  "market_model": "paper_rank"
 }

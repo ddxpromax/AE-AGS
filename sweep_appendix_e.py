@@ -11,7 +11,7 @@ import numpy as np
 from run_experiment import run_one_repeat
 
 
-ALG_NAMES = ["AE-AGS", "C-ETC(simple)", "Random"]
+ALG_NAMES = ["AE-AGS", "C-ETC", "P-ETC", "Random"]
 
 
 def run_setting(
@@ -25,6 +25,8 @@ def run_setting(
     runs: int,
     jobs: int,
     seed: int,
+    market_model: str,
+    record_every: int,
 ) -> Dict[str, Dict[str, float]]:
     agg: Dict[str, List[np.ndarray]] = {k: [] for k in ALG_NAMES}
     unstable: Dict[str, List[float]] = {k: [] for k in ALG_NAMES}
@@ -40,6 +42,8 @@ def run_setting(
                 sigma,
                 clip_rewards,
                 rectify_regret,
+                market_model,
+                record_every,
                 seed,
                 r,
             )
@@ -60,6 +64,8 @@ def run_setting(
                     sigma,
                     clip_rewards,
                     rectify_regret,
+                    market_model,
+                    record_every,
                     seed,
                     r,
                 )
@@ -137,6 +143,8 @@ def main() -> None:
     parser.add_argument("--sigma", type=float, default=1.0)
     parser.add_argument("--clip-rewards", type=int, choices=[0, 1], default=0)
     parser.add_argument("--rectify-regret", type=int, choices=[0, 1], default=0)
+    parser.add_argument("--market-model", type=str, choices=["paper_rank", "level_uniform"], default="paper_rank")
+    parser.add_argument("--record-every", type=int, default=0)
     parser.add_argument("--output-dir", type=str, default="results")
     args = parser.parse_args()
 
@@ -159,6 +167,8 @@ def main() -> None:
             "sigma": args.sigma,
             "clip_rewards": int(clip_rewards),
             "rectify_regret": int(rectify_regret),
+            "market_model": args.market_model,
+            "record_every": args.record_every,
         },
         "delta_sweep": {"delta_values": delta_values, "results": []},
         "size_sweep": {"sizes": size_values, "results": []},
@@ -177,6 +187,8 @@ def main() -> None:
             args.runs,
             args.jobs,
             args.seed + 10000,
+            args.market_model,
+            args.record_every,
         )
         payload["delta_sweep"]["results"].append({"delta": d, "metrics": metrics})
         print(f"  delta={d} done")
@@ -194,6 +206,8 @@ def main() -> None:
             args.runs,
             args.jobs,
             args.seed + 20000,
+            args.market_model,
+            args.record_every,
         )
         payload["size_sweep"]["results"].append({"N": n, "K": n, "metrics": metrics})
         print(f"  N=K={n} done")

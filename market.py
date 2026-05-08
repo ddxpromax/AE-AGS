@@ -183,6 +183,7 @@ def make_random_market(
     levels: int = 3,
     sigma: float = 1.0,
     clip_rewards: bool = False,
+    model: str = "paper_rank",
     seed: int = 0,
 ) -> MatchingMarket:
     """
@@ -190,16 +191,31 @@ def make_random_market(
     Players' utilities are sampled via rank levels; same level => equal utility.
     """
     rng = np.random.default_rng(seed)
-    utility_levels = np.linspace(0.2, 0.2 + delta * (levels - 1), levels)
     mu = np.zeros((n_players, n_arms), dtype=float)
-    for i in range(n_players):
-        level_ids = rng.integers(0, levels, size=n_arms)
-        mu[i] = utility_levels[level_ids]
-
-    # Arm ranking positions (ties allowed).
     arm_rank = np.zeros((n_arms, n_players), dtype=int)
-    for a in range(n_arms):
-        arm_rank[a] = rng.integers(0, levels, size=n_players)
+
+    if model == "paper_rank":
+        # Closer to Appendix E description:
+        # each arm position in a player's ranking is random in {1..K},
+        # arms with same position share equal utility,
+        # adjacent positions differ by delta.
+        for i in range(n_players):
+            pos = rng.integers(1, n_arms + 1, size=n_arms)  # 1=best
+            mu[i] = (n_arms - pos) * delta
+        for a in range(n_arms):
+            # Lower rank value means arm prefers this player more.
+            arm_rank[a] = rng.integers(1, n_players + 1, size=n_players)
+    elif model == "level_uniform":
+        # Legacy synthetic model.
+        utility_levels = np.linspace(0.2, 0.2 + delta * (levels - 1), levels)
+        for i in range(n_players):
+            level_ids = rng.integers(0, levels, size=n_arms)
+            mu[i] = utility_levels[level_ids]
+        for a in range(n_arms):
+            arm_rank[a] = rng.integers(0, levels, size=n_players)
+    else:
+        raise ValueError(f"Unknown market model: {model}")
+
     return MatchingMarket(
         mu=mu,
         arm_rank=arm_rank,

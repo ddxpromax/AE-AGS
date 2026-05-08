@@ -8,7 +8,7 @@ This folder contains a minimal, runnable reproduction of the core AE-AGS idea fr
 
 - `market.py`: matching market simulator with indifference and stability checker.
 - `aeags_centralized.py`: centralized AE-AGS core logic (Algorithm 1/2/3 style).
-- `baselines.py`: simple baselines (`ExploreThenCommit`, `RandomMatchingPolicy`).
+- `baselines.py`: baseline implementations (`CETCKnownDelta`, `PhasedETC`, `RandomMatchingPolicy`).
 - `run_experiment.py`: run toy experiments and print cumulative stable regret / unstability.
 
 ## Quick Start
@@ -42,6 +42,12 @@ python run_experiment.py --preset paper_clean --jobs 8
 # 6) Save one run to JSON file
 python run_experiment.py --preset paper_default --jobs 8 --save-json results/one_run.json
 
+# 6.1) Save run JSON with trajectory samples every 1000 rounds
+python run_experiment.py --preset paper_default --jobs 8 --record-every 1000 --save-json results/one_run_curve.json
+
+# 6.2) Plot paper-style curves from saved JSON
+python plot_from_run_json.py --input-json results/one_run_curve.json
+
 # 7) Git push current branch
 git add .
 git commit -m "update experiments"
@@ -74,6 +80,8 @@ Run in parallel across independent repeats:
 ```bash
 python run_experiment.py --preset paper_default --config configs/paper_default.json
 ```
+
+The default synthetic market model is `paper_rank` (rank-position mapped utilities, closer to Appendix E text).
 
 ## Appendix E Sweeps (One Command)
 
@@ -109,7 +117,7 @@ python run_experiment.py --preset paper_clean
 ## Notes
 
 - This is a **minimal reproduction scaffold** focused on correctness and executability.
-- The baseline `C-ETC(simple)` is a simplified ETC-style implementation for comparison; it is not a line-by-line copy of the paper's exact baseline.
+- Baselines are practical reproductions aimed to be closer to paper-style C-ETC / phased ETC behavior, but still not a line-by-line reimplementation of every original paper detail.
 - Next step for strict paper-level reproduction is to add:
   - decentralized AE-AGS (Algorithm 4/5),
   - exact phase/communication protocol,
