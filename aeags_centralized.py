@@ -51,12 +51,12 @@ class AEAGSCentralized:
         Arm-guided GS with adaptive elimination.
         arm_rank: [K, N], lower rank means more preferred.
         """
-        available = [set() for _ in range(self.N)]
-        player_match = np.full(self.N, -1, dtype=int)
-        arm_match = np.full(self.K, -1, dtype=int)
-        s = np.zeros(self.K, dtype=int)
+        available = [set() for _ in range(self.N)]  # A_i in the paper.
+        player_match = np.full(self.N, -1, dtype=int)  # m_i
+        arm_match = np.full(self.K, -1, dtype=int)  # m_j^{-1}
+        s = np.zeros(self.K, dtype=int)  # current proposing rank s_j (0-indexed)
 
-        # Build inverse index: position -> player for each arm.
+        # Player order for each arm from best to worst (stable tie-breaking).
         order = np.argsort(arm_rank, axis=1, kind="stable")
 
         def choose_player_arm(i: int) -> int:
@@ -79,29 +79,36 @@ class AEAGSCentralized:
             return int(valid[best_idx])
 
         while True:
-            free_arm = None
-            for a in range(self.K):
-                if arm_match[a] == -1 and s[a] < self.N:
-                    free_arm = a
+            # Find an unmatched arm that still has players to propose.
+            a = -1
+            for j in range(self.K):
+                if arm_match[j] == -1 and s[j] < self.N:
+                    a = j
                     break
-            if free_arm is None:
+            if a == -1:
                 break
 
-            a = free_arm
+            # Arm a proposes to its s[a]-th preferred player.
             i = int(order[a, s[a]])
             available[i].add(a)
+
+            # Player i chooses among available arms with AE-AGS rule.
             chosen = choose_player_arm(i)
-            old = player_match[i]
+            old = int(player_match[i])
             player_match[i] = chosen
             arm_match[chosen] = i
+
+            # Old matched arm of i gets rejected and moves to next player.
             if old != -1 and old != chosen:
                 arm_match[old] = -1
                 s[old] += 1
 
-            # Any non-chosen arm in available set gets rejected this iteration.
+            # All non-chosen available arms are rejected by i.
             for rej in list(available[i]):
-                if rej != chosen and arm_match[rej] == -1:
-                    s[rej] += 1
+                if rej == chosen:
+                    continue
+                arm_match[rej] = -1
+                s[rej] += 1
         return player_match
 
     def assign_actions(self, arm_rank: np.ndarray) -> np.ndarray:

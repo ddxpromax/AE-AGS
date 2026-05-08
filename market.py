@@ -13,6 +13,9 @@ class MatchingMarket:
     mu: np.ndarray  # shape [N, K], player utilities for arms
     arm_rank: np.ndarray  # shape [K, N], lower is better rank for arms over players
     sigma: float = 1.0
+    clip_rewards: bool = False
+    reward_min: float = 0.0
+    reward_max: float = 1.0
     rng_seed: int = 0
 
     def __post_init__(self) -> None:
@@ -56,7 +59,10 @@ class MatchingMarket:
         for i in range(self.N):
             a = matched_arm[i]
             if a >= 0:
-                rewards[i] = float(self.rng.normal(self.mu[i, a], self.sigma))
+                sampled = float(self.rng.normal(self.mu[i, a], self.sigma))
+                if self.clip_rewards:
+                    sampled = float(np.clip(sampled, self.reward_min, self.reward_max))
+                rewards[i] = sampled
         return matched_arm, rewards
 
     def is_stable_matching(self, matching: Sequence[int]) -> bool:
@@ -110,6 +116,8 @@ def make_random_market(
     n_arms: int,
     delta: float = 0.1,
     levels: int = 3,
+    sigma: float = 1.0,
+    clip_rewards: bool = False,
     seed: int = 0,
 ) -> MatchingMarket:
     """
@@ -127,4 +135,10 @@ def make_random_market(
     arm_rank = np.zeros((n_arms, n_players), dtype=int)
     for a in range(n_arms):
         arm_rank[a] = rng.integers(0, levels, size=n_players)
-    return MatchingMarket(mu=mu, arm_rank=arm_rank, sigma=1.0, rng_seed=seed + 999)
+    return MatchingMarket(
+        mu=mu,
+        arm_rank=arm_rank,
+        sigma=sigma,
+        clip_rewards=clip_rewards,
+        rng_seed=seed + 999,
+    )

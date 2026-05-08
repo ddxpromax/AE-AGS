@@ -3,6 +3,9 @@
   "K": 5,
   "T": 100000,
   "delta": 0.1,
+  "sigma": 1.0,
+  "clip_rewards": false,
+  "rectify_regret": false,
   "seed": 0,
   "runs": 20
 }

@@ -18,7 +18,7 @@ cd /root/AE-AGS
 python run_experiment.py --preset quick
 ```
 
-## One-Command Paper Default
+## One-Command Paper Default (Raw, Paper-Aligned)
 
 Use the paper-style default scale (N=5, K=5, T=100000, runs=20):
 
@@ -33,10 +33,31 @@ You can still override fields, for example:
 ./run_paper_default.sh --runs 5
 ```
 
+Run in parallel across independent repeats:
+
+```bash
+./run_paper_default.sh --runs 20 --jobs 8
+```
+
 ## Config-Driven Run
 
 ```bash
 python run_experiment.py --preset paper_default --config configs/paper_default.json
+```
+
+## About Negative Rewards / Regrets
+
+By default (`paper_default`), this repo now uses paper-aligned raw settings:
+
+- `clip_rewards=0`
+- `rectify_regret=0`
+
+So negative sampled rewards / cumulative regrets can appear and are expected.
+
+If you want a cleaned-up non-negative reporting style, use:
+
+```bash
+python run_experiment.py --preset paper_clean
 ```
 
 ## Notes
