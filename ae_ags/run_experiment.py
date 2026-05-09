@@ -133,6 +133,8 @@ def run_policy(
     rectify_regret: bool,
     record_every: int = 0,
     seed: int = 0,
+    *,
+    reward_experiment_seed: int | None = None,
 ) -> RunResult:
     rng = np.random.default_rng(seed)
     stable_regret = np.zeros(market.mu.shape[0], dtype=float)
@@ -143,7 +145,15 @@ def run_policy(
 
     for t in range(1, horizon + 1):
         actions = policy.assign_actions(market.arm_rank)
-        matched_arm, rewards = market.resolve_round(actions, rng)
+        if reward_experiment_seed is None:
+            matched_arm, rewards = market.resolve_round(actions, rng)
+        else:
+            matched_arm, rewards = market.resolve_round(
+                actions,
+                rng,
+                timestep=t,
+                reward_experiment_seed=int(reward_experiment_seed),
+            )
         policy.observe(actions, matched_arm, rewards)
 
         step_regret = regret_reference_mu - rewards
@@ -247,6 +257,8 @@ def run_one_repeat(
     )
     regret_ref_rng = np.random.default_rng(seed + 424242 + run_index)
     regret_reference_mu = market.stable_regret_reference_per_player(rng=regret_ref_rng)
+    # Same (t, player, arm) rewards across algorithms on this market instance (policy rng still differs).
+    reward_noise_seed = int(seed) + 1_001_311 * int(run_index)
 
     aeags = AEAGSCentralized(
         n_players,
@@ -275,10 +287,46 @@ def run_one_repeat(
     rnd = RandomMatchingPolicy(n_players, n_arms, seed=seed + run_index)
 
     return {
-        "AE-AGS": run_policy(market, aeags, horizon, regret_reference_mu, rectify_regret, record_every, seed + 11),
-        "C-ETC": run_policy(market, c_etc, horizon, regret_reference_mu, rectify_regret, record_every, seed + 22),
-        "P-ETC": run_policy(market, p_etc, horizon, regret_reference_mu, rectify_regret, record_every, seed + 33),
-        "Random": run_policy(market, rnd, horizon, regret_reference_mu, rectify_regret, record_every, seed + 44),
+        "AE-AGS": run_policy(
+            market,
+            aeags,
+            horizon,
+            regret_reference_mu,
+            rectify_regret,
+            record_every,
+            seed + 11,
+            reward_experiment_seed=reward_noise_seed,
+        ),
+        "C-ETC": run_policy(
+            market,
+            c_etc,
+            horizon,
+            regret_reference_mu,
+            rectify_regret,
+            record_every,
+            seed + 22,
+            reward_experiment_seed=reward_noise_seed,
+        ),
+        "P-ETC": run_policy(
+            market,
+            p_etc,
+            horizon,
+            regret_reference_mu,
+            rectify_regret,
+            record_every,
+            seed + 33,
+            reward_experiment_seed=reward_noise_seed,
+        ),
+        "Random": run_policy(
+            market,
+            rnd,
+            horizon,
+            regret_reference_mu,
+            rectify_regret,
+            record_every,
+            seed + 44,
+            reward_experiment_seed=reward_noise_seed,
+        ),
     }
 
 

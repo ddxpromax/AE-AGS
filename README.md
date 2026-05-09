@@ -114,7 +114,7 @@ Implementation-side (already in code): **`is_stable_matching` reuses cached play
 
 - **Market stability** mirrors the blocking-pair definition in the paper §3: a pair `(p_i,a_j)` blocks only when **`µ_{i,j} > µ_{i,Ā_i}` strictly** **and** the arm **`π_{j,i} ≺ π_{j, partner}` strictly**. Tied `µ` or tied `π` must not invent a bogus strict order (`argsort` tie-breaking was removed for stability checks).
 
-- Arms break ties among equally preferred proposers **uniformly at random**, per the paper §3 (**`resolve_round`** uses shared `rng`), instead of deterministic lowest player index only.
+- Arms break ties among equally preferred proposers **uniformly at random**, per the paper §3 (`resolve_round`; each algorithm run passes its **own** `rng`), instead of deterministic lowest player index only.
 
 - **Appendix Fig. 1 knobs** (see `configs/paper_default.json`): `aeags_confidence_factor` stays at the theoretical `6` inside `sqrt(factor · ln(T) / T_ij)` for AE-AGS. `c_etc_log_coeff` scales C-ETC pulls per directed pair as `coeff · ln(T)/Δ²`. A **theorem-style** choice is `coeff≈4`, but at `T=100k` it undershoots the cumulative unstability in Fig. 1(f); the default **`coeff≈8.35`** is an empirical match so C-ETC’s *mean* unstability sits near **≈43%** of rounds in repeated runs at `T=100k` (tune via `--c-etc-log-coeff`; authors do not publish the exact scripted constant). `p_etc_explore_coef` scales phased exploration length. Offline GS commits apply tiny Gaussian perturbations to `μ̂` before player-proposing GS (Appendix B style ties).
 
@@ -122,6 +122,17 @@ Implementation-side (already in code): **`is_stable_matching` reuses cached play
   \(\mu_{i,m_i}=\min_{\text{stable }m'}\mu_{i,m'(i)}\), computed in
   `MatchingMarket.stable_regret_reference_per_player`. Step regret is
   \(\mu_{i,m_i}-X_{i,A_i(t)}(t)\) on the matched arm outcome each round.
+  Because \(\mu_{i,m_i}\) is the **worst** stable payoff for player \(i\),
+  typical realized rewards \(X\) can sit **above** that benchmark for long stretches, so the
+  **cumulative sum can decrease** and go **negative** — this is compatible with Fig. 1 in the paper
+  (see the extracted axis ranges in the appendix) and does **not**, by itself, mean the run is invalid.
+  Use `--rectify-regret 1` (`paper_clean`) for a nonnegative per-round “gap” view.
+
+- **Shared reward noise across algorithms.** Within one repeat, AE-AGS, C-ETC, P-ETC, and Random share the
+  same \(\mu\) matrix. If at round \(t\) player \(i\) is matched to arm \(a\) under a policy, the code samples
+  \(\mathcal N(\mu_{i,a},\sigma)\) from a **deterministic** stream keyed by `(experiment seed, t, i, a)`, so two
+  policies that induce the same matching at `(t,i,a)` see the **same** Gaussian draw. Tie-breaking among
+  equally preferred proposers in `resolve_round` still uses **each policy’s** RNG, so matchings can diverge.
 
 - AE-AGS empirical means \(T_{i,j}\) update only when the player was **actually matched**
   to the arm the platform assigned (Algorithm 3, lines 7–9).

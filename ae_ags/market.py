@@ -42,10 +42,39 @@ class MatchingMarket:
         """For each arm, player indices from most to least preferred (Algorithm 2 / resolve_round)."""
         return self._arm_propose_player_idx
 
-    def resolve_round(self, chosen_arm: np.ndarray, rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
+    @staticmethod
+    def _reward_noise(experiment_reward_seed: int, timestep: int, player: int, arm: int, sigma: float) -> float:
+        """
+        Counter-based Gaussian noise so two policies sharing the same market and seed see the
+        same reward draw whenever the same player is matched to the same arm at the same t.
+        (Tie-breaking among finalists still uses the caller's rng and may differ.)
+        """
+        ss = np.random.SeedSequence(
+            [
+                int(experiment_reward_seed) & 0xFFFFFFFF,
+                int(timestep),
+                int(player),
+                int(arm),
+            ]
+        )
+        g = np.random.default_rng(ss)
+        return float(g.normal(0.0, sigma))
+
+    def resolve_round(
+        self,
+        chosen_arm: np.ndarray,
+        rng: np.random.Generator,
+        *,
+        timestep: Optional[int] = None,
+        reward_experiment_seed: Optional[int] = None,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Resolve one round under one-to-one capacity constraints.
         Players propose to chosen arms; each arm accepts the most preferred proposer.
+        If ``timestep`` and ``reward_experiment_seed`` are set, matched rewards use
+        deterministic Gaussian noise keyed by (seed, t, player, arm) so algorithms
+        sharing a market see the same draw whenever they realize the same matching.
+        Tie-breaking among equally ranked proposers still uses ``rng``.
         Returns:
           matched_arm: shape [N], matched arm id or -1
           rewards: shape [N], sampled reward if matched else 0.0
@@ -67,7 +96,13 @@ class MatchingMarket:
             finalists = [i for i in plist if self.arm_rank[a, i] == best_rank]
             best_i = int(finalists[int(rng.integers(0, len(finalists)))]) if len(finalists) > 1 else int(finalists[0])
             matched_arm[best_i] = a
-            sampled = float(rng.normal(self.mu[best_i, a], self.sigma))
+            if timestep is not None and reward_experiment_seed is not None:
+                sampled = float(
+                    self.mu[best_i, a]
+                    + self._reward_noise(int(reward_experiment_seed), int(timestep), int(best_i), int(a), self.sigma)
+                )
+            else:
+                sampled = float(rng.normal(self.mu[best_i, a], self.sigma))
             if self.clip_rewards:
                 sampled = float(np.clip(sampled, self.reward_min, self.reward_max))
             rewards[best_i] = sampled
