@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple
+from typing import TYPE_CHECKING, Optional, Tuple
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from .market import MatchingMarket
 
 
 @dataclass
@@ -18,15 +21,27 @@ class AEAGSCentralized:
     Centralized AE-AGS (Algorithm 1/2/3 style).
     """
 
-    def __init__(self, n_players: int, n_arms: int, horizon: int, seed: int = 0):
+    def __init__(
+        self,
+        n_players: int,
+        n_arms: int,
+        horizon: int,
+        seed: int = 0,
+        market: Optional["MatchingMarket"] = None,
+    ):
         self.N = n_players
         self.K = n_arms
         self.T = max(2, horizon)
+        self._log_T = float(np.log(self.T))
         self.rng = np.random.default_rng(seed)
         self.state = AEAGSState(
             mu_hat=np.zeros((self.N, self.K), dtype=float),
             counts=np.zeros((self.N, self.K), dtype=int),
             better=np.zeros((self.N, self.K, self.K), dtype=np.int8),
+        )
+        # Fixed for the run; avoids argsort(arm_rank) every round.
+        self._arm_propose_order: Optional[np.ndarray] = (
+            np.asarray(market.arm_propose_player_idx, dtype=np.int32) if market is not None else None
         )
 
     def _compute_confidence_bounds(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -34,30 +49,27 @@ class AEAGSCentralized:
         mu_hat = self.state.mu_hat
         rad = np.zeros_like(mu_hat)
         positive = counts > 0
-        rad[positive] = np.sqrt(6.0 * np.log(self.T) / counts[positive])
+        rad[positive] = np.sqrt(6.0 * self._log_T / counts[positive])
         ucb = np.where(positive, mu_hat + rad, np.inf)
         lcb = np.where(positive, mu_hat - rad, -np.inf)
         return ucb, lcb
 
     def _update_better(self, ucb: np.ndarray, lcb: np.ndarray) -> None:
-        for i in range(self.N):
-            for j in range(self.K):
-                for jp in range(self.K):
-                    if lcb[i, j] > ucb[i, jp]:
-                        self.state.better[i, j, jp] = 1
+        # Better(i,j,j') = 1 iff LCB_{i,j} > UCB_{i,j'} (Algorithm 3); monotonic OR with past.
+        flags = lcb[:, :, None] > ucb[:, None, :]
+        self.state.better |= flags.astype(np.int8, copy=False)
 
-    def _subroutine_matching(self, arm_rank: np.ndarray) -> np.ndarray:
+    def _subroutine_matching(self, propose_order: np.ndarray) -> np.ndarray:
         """
         Arm-guided GS with adaptive elimination.
-        arm_rank: [K, N], lower rank means more preferred.
+        propose_order: [K, N] int, for each arm row: player indices best → worst.
         """
         available = [set() for _ in range(self.N)]  # A_i in the paper.
         player_match = np.full(self.N, -1, dtype=int)  # m_i
         arm_match = np.full(self.K, -1, dtype=int)  # m_j^{-1}
         s = np.zeros(self.K, dtype=int)  # current proposing rank s_j (0-indexed)
 
-        # Player order for each arm from best to worst (stable tie-breaking).
-        order = np.argsort(arm_rank, axis=1, kind="stable")
+        order = propose_order
 
         def choose_player_arm(i: int) -> int:
             candidates = sorted(available[i])
@@ -112,9 +124,11 @@ class AEAGSCentralized:
         return player_match
 
     def assign_actions(self, arm_rank: np.ndarray) -> np.ndarray:
+        if self._arm_propose_order is None:
+            self._arm_propose_order = np.argsort(arm_rank, axis=1, kind="stable").astype(np.int32, copy=False)
         ucb, lcb = self._compute_confidence_bounds()
         self._update_better(ucb, lcb)
-        return self._subroutine_matching(arm_rank)
+        return self._subroutine_matching(self._arm_propose_order)
 
     def observe(self, assigned_arm: np.ndarray, matched_arm: np.ndarray, rewards: np.ndarray) -> None:
         # Algorithm 3: update only if p_i is successfully matched to the assigned A_i(t).

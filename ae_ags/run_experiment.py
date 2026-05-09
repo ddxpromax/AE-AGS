@@ -220,7 +220,7 @@ def run_one_repeat(
     regret_ref_rng = np.random.default_rng(seed + 424242 + run_index)
     regret_reference_mu = market.stable_regret_reference_per_player(rng=regret_ref_rng)
 
-    aeags = AEAGSCentralized(n_players, n_arms, horizon, seed=seed + run_index)
+    aeags = AEAGSCentralized(n_players, n_arms, horizon, seed=seed + run_index, market=market)
     c_etc = CETCKnownDelta(n_players, n_arms, horizon, delta=delta, seed=seed + run_index)
     p_etc = PhasedETC(n_players, n_arms, horizon, delta=delta, seed=seed + run_index)
     rnd = RandomMatchingPolicy(n_players, n_arms, seed=seed + run_index)

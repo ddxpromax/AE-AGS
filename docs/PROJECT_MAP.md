@@ -43,6 +43,9 @@ This document explains how the repository is organized and where to edit when ex
 - `configs/paper_default.json`
   - Default paper-scale parameters.
 
+- `scripts/parallel_defaults.sh`
+  - Sourced by `run_paper_default.sh` and `run_appendix_e.sh`: default `OMP_NUM_THREADS=1` (and MKL/OpenBLAS mirrors) when unset, to pair with multi-process `--jobs`.
+
 - `run_paper_default.sh`
   - Wrapper over `python -m ae_ags.run_experiment` with paper default config.
 

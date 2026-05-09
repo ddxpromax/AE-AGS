@@ -82,6 +82,23 @@ python -m ae_ags.plot_from_run_json \
 
 ---
 
+## Faster runs (wall-clock)
+
+Cost is dominated by **\(T \times\)** per-round simulation (matching + stability check × 4 policies). Appendix E sweep multiplies that by several \((\Delta, N)\) points.
+
+Practical knobs:
+
+| Idea | Effect |
+|------|--------|
+| **`--runs 20 --jobs 8`** (or `jobs ≤` CPU cores) | Best lever: parallel independent repeats (ProcessPoolExecutor). |
+| **BLAS single-thread defaults** | `run_paper_default.sh` / `run_appendix_e.sh` source `scripts/parallel_defaults.sh` unless you already exported `OMP_NUM_THREADS` etc. **`make paper-j8`** / **`make paper-json`** prefix the same vars (override via `PARALLEL_BLAS=...`). |
+| **`--record-every 5000`** (or larger) vs `1000` | Fewer trajectory snapshots ⇒ slightly less aggregation / JSON churn; main loop cost barely changes. |
+| Appendix E **`--runs`** | Paper uses 20; lowering (e.g. 10) for dry runs scales linearly but is no longer apples-to-apples with Figure 2. |
+
+Implementation-side (already in code): **`is_stable_matching` reuses cached player inverse ranks**, **`Better` updates are vectorized**, **`log(T)` precomputed**, and **AE-AGS reuses a fixed arm→player propose order** for the whole run instead of sorting `arm_rank` every round.
+
+---
+
 ## Notes on Metrics
 
 - **Stable regret (paper Eq. (1))** uses a per-player *regret reference* (not an algorithm baseline like C-ETC):

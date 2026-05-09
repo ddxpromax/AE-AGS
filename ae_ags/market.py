@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import itertools
 from typing import Optional
 
@@ -21,6 +21,26 @@ class MatchingMarket:
     clip_rewards: bool = False
     reward_min: float = -10.0
     reward_max: float = 10.0
+    # Cached for is_stable_matching (μ is fixed for the run).
+    _player_inv_rank: np.ndarray = field(init=False, repr=False)
+    # Cached arm-side propose order: for each arm, player indices best→worst.
+    _arm_propose_player_idx: np.ndarray = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        N, K = self.mu.shape
+        player_rank = np.argsort(-self.mu, axis=1, kind="stable")
+        inv = np.empty((N, K), dtype=np.int32)
+        inv[np.arange(N, dtype=np.int32)[:, None], player_rank.astype(np.int32, copy=False)] = np.arange(
+            K, dtype=np.int32
+        )
+        object.__setattr__(self, "_player_inv_rank", inv)
+        arm_order = np.argsort(self.arm_rank, axis=1, kind="stable").astype(np.int32, copy=False)
+        object.__setattr__(self, "_arm_propose_player_idx", arm_order)
+
+    @property
+    def arm_propose_player_idx(self) -> np.ndarray:
+        """For each arm, player indices from most to least preferred (Algorithm 2 / resolve_round)."""
+        return self._arm_propose_player_idx
 
     def resolve_round(self, chosen_arm: np.ndarray, rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -60,16 +80,13 @@ class MatchingMarket:
             if 0 <= a < K:
                 arm_partner[a] = i
 
-        player_rank = np.argsort(-self.mu, axis=1, kind="stable")
-        inv_rank = np.empty_like(player_rank)
-        for i in range(N):
-            inv_rank[i, player_rank[i]] = np.arange(K)
+        inv_rank = self._player_inv_rank
 
         for i in range(N):
             current = matched_arm[i]
-            current_rank = inv_rank[i, current] if current >= 0 else K
+            current_rank = int(inv_rank[i, current]) if current >= 0 else K
             for a in range(K):
-                if inv_rank[i, a] >= current_rank:
+                if int(inv_rank[i, a]) >= current_rank:
                     continue
                 partner = arm_partner[a]
                 if partner == -1:

@@ -60,6 +60,21 @@ python -m ae_ags.sweep_appendix_e --T 100000 --runs 20 --jobs 8 --output-dir res
 python -m ae_ags.run_experiment --preset paper_clean --jobs 8
 ```
 
+## H. Faster wall-clock runs
+
+Parallel repeats (recommended):
+
+```bash
+python -m ae_ags.run_experiment --preset paper_default --config configs/paper_default.json --runs 20 --jobs 8
+```
+
+When using several workers, pin BLAS to one thread each to reduce oversubscription:
+
+```bash
+export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
+python -m ae_ags.run_experiment --preset paper_default --runs 20 --jobs 8
+```
+
 ## G. Git workflow
 
 ```bash
