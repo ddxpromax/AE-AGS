@@ -84,6 +84,14 @@ python -m ae_ags.plot_from_run_json \
 
 ## Notes on Metrics
 
+- **Stable regret (paper Eq. (1))** uses a per-player *regret reference* (not an algorithm baseline like C-ETC):
+  \(\mu_{i,m_i}=\min_{\text{stable }m'}\mu_{i,m'(i)}\), computed in
+  `MatchingMarket.stable_regret_reference_per_player`. Step regret is
+  \(\mu_{i,m_i}-X_{i,A_i(t)}(t)\) on the matched arm outcome each round.
+
+- AE-AGS empirical means \(T_{i,j}\) update only when the player was **actually matched**
+  to the arm the platform assigned (Algorithm 3, lines 7–9).
+
 - `paper_default` uses raw paper-style settings:
   - `clip_rewards=0`
   - `rectify_regret=0`

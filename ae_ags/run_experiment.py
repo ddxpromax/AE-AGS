@@ -114,7 +114,7 @@ def run_policy(
     market: MatchingMarket,
     policy,
     horizon: int,
-    baseline_reward: np.ndarray,
+    regret_reference_mu: np.ndarray,
     rectify_regret: bool,
     record_every: int = 0,
     seed: int = 0,
@@ -129,9 +129,9 @@ def run_policy(
     for t in range(1, horizon + 1):
         actions = policy.assign_actions(market.arm_rank)
         matched_arm, rewards = market.resolve_round(actions, rng)
-        policy.observe(matched_arm, rewards)
+        policy.observe(actions, matched_arm, rewards)
 
-        step_regret = baseline_reward - rewards
+        step_regret = regret_reference_mu - rewards
         if rectify_regret:
             step_regret = np.maximum(step_regret, 0.0)
         stable_regret += step_regret
@@ -217,7 +217,8 @@ def run_one_repeat(
         model=market_model,
         seed=seed + 1000 * run_index,
     )
-    baseline_reward = market.stable_baseline_reward()
+    regret_ref_rng = np.random.default_rng(seed + 424242 + run_index)
+    regret_reference_mu = market.stable_regret_reference_per_player(rng=regret_ref_rng)
 
     aeags = AEAGSCentralized(n_players, n_arms, horizon, seed=seed + run_index)
     c_etc = CETCKnownDelta(n_players, n_arms, horizon, delta=delta, seed=seed + run_index)
@@ -225,10 +226,10 @@ def run_one_repeat(
     rnd = RandomMatchingPolicy(n_players, n_arms, seed=seed + run_index)
 
     return {
-        "AE-AGS": run_policy(market, aeags, horizon, baseline_reward, rectify_regret, record_every, seed + 11),
-        "C-ETC": run_policy(market, c_etc, horizon, baseline_reward, rectify_regret, record_every, seed + 22),
-        "P-ETC": run_policy(market, p_etc, horizon, baseline_reward, rectify_regret, record_every, seed + 33),
-        "Random": run_policy(market, rnd, horizon, baseline_reward, rectify_regret, record_every, seed + 44),
+        "AE-AGS": run_policy(market, aeags, horizon, regret_reference_mu, rectify_regret, record_every, seed + 11),
+        "C-ETC": run_policy(market, c_etc, horizon, regret_reference_mu, rectify_regret, record_every, seed + 22),
+        "P-ETC": run_policy(market, p_etc, horizon, regret_reference_mu, rectify_regret, record_every, seed + 33),
+        "Random": run_policy(market, rnd, horizon, regret_reference_mu, rectify_regret, record_every, seed + 44),
     }
 
 

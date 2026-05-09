@@ -116,10 +116,11 @@ class AEAGSCentralized:
         self._update_better(ucb, lcb)
         return self._subroutine_matching(arm_rank)
 
-    def observe(self, matched_arm: np.ndarray, rewards: np.ndarray) -> None:
+    def observe(self, assigned_arm: np.ndarray, matched_arm: np.ndarray, rewards: np.ndarray) -> None:
+        # Algorithm 3: update only if p_i is successfully matched to the assigned A_i(t).
         for i in range(self.N):
-            a = int(matched_arm[i])
-            if a < 0:
+            a = int(assigned_arm[i])
+            if a < 0 or int(matched_arm[i]) != a:
                 continue
             c = self.state.counts[i, a]
             new_c = c + 1

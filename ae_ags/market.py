@@ -78,71 +78,76 @@ class MatchingMarket:
                     return False
         return True
 
-    def stable_baseline_reward(
+    def _sampled_player_gs(self, rng: np.random.Generator) -> np.ndarray:
+        """Player-proposing GS with random tie perturbations (for baseline sampling)."""
+        N, K = self.mu.shape
+        player_rank = np.argsort(-self.mu + 1e-9 * rng.normal(size=self.mu.shape), axis=1)
+        perturbed_arm = np.argsort(self.arm_rank + 1e-9 * rng.normal(size=self.arm_rank.shape), axis=1)
+
+        next_idx = np.zeros(N, dtype=int)
+        player_match = np.full(N, -1, dtype=int)
+        arm_match = np.full(K, -1, dtype=int)
+        free = list(range(N))
+
+        arm_pos = np.full((K, N), N, dtype=int)
+        for a in range(K):
+            for pos, p in enumerate(perturbed_arm[a]):
+                arm_pos[a, p] = pos
+
+        while free:
+            i = free.pop()
+            while next_idx[i] < K and player_match[i] == -1:
+                a = int(player_rank[i, next_idx[i]])
+                next_idx[i] += 1
+                cur = arm_match[a]
+                if cur == -1:
+                    arm_match[a] = i
+                    player_match[i] = a
+                elif arm_pos[a, i] < arm_pos[a, cur]:
+                    arm_match[a] = i
+                    player_match[i] = a
+                    player_match[cur] = -1
+                    free.append(cur)
+        return player_match
+
+    def stable_regret_reference_per_player(
         self,
         exact_cutoff: int = 8,
         approx_samples: int = 256,
         rng: Optional[np.random.Generator] = None,
-    ) -> float:
+    ) -> np.ndarray:
         """
-        Minimum total expected reward among stable matchings.
-        Exact enumeration for small N; sampled GS for larger N.
+        Reference vector for stable regret (paper Eq. (1)), not related to baseline *algorithms*.
+
+        For each player i: μ_{i,m_i} = min_{m' stable} μ_{i,m'(i)}.
+        Exact over all stable matchings when N ≤ exact_cutoff; otherwise approximate via
+        random player-proposing GS draws.
         """
         N, K = self.mu.shape
         rng = np.random.default_rng() if rng is None else rng
+        idx = np.arange(N, dtype=int)
+        fallback = np.min(self.mu, axis=1).astype(float)
+
+        per = np.full(N, np.inf, dtype=float)
 
         if N <= exact_cutoff:
-            best = np.inf
             for perm in itertools.permutations(range(K), N):
                 m = np.array(perm, dtype=int)
                 if self.is_stable_matching(m):
-                    total = float(np.sum(self.mu[np.arange(N), m]))
-                    best = min(best, total)
-            if np.isfinite(best):
-                return best
+                    vals = self.mu[idx, m].astype(float)
+                    per = np.minimum(per, vals)
+            if np.all(np.isfinite(per)):
+                return per
+        else:
+            for _ in range(max(1, approx_samples)):
+                m = self._sampled_player_gs(rng)
+                if self.is_stable_matching(m):
+                    vals = self.mu[idx, m].astype(float)
+                    per = np.minimum(per, vals)
+            if np.all(np.isfinite(per)):
+                return per
 
-        def sampled_player_gs() -> np.ndarray:
-            player_rank = np.argsort(-self.mu + 1e-9 * rng.normal(size=self.mu.shape), axis=1)
-            arm_rank = np.argsort(self.arm_rank + 1e-9 * rng.normal(size=self.arm_rank.shape), axis=1)
-
-            next_idx = np.zeros(N, dtype=int)
-            player_match = np.full(N, -1, dtype=int)
-            arm_match = np.full(K, -1, dtype=int)
-            free = list(range(N))
-
-            arm_pos = np.full((K, N), N, dtype=int)
-            for a in range(K):
-                for pos, p in enumerate(arm_rank[a]):
-                    arm_pos[a, p] = pos
-
-            while free:
-                i = free.pop()
-                while next_idx[i] < K and player_match[i] == -1:
-                    a = int(player_rank[i, next_idx[i]])
-                    next_idx[i] += 1
-                    cur = arm_match[a]
-                    if cur == -1:
-                        arm_match[a] = i
-                        player_match[i] = a
-                    elif arm_pos[a, i] < arm_pos[a, cur]:
-                        arm_match[a] = i
-                        player_match[i] = a
-                        player_match[cur] = -1
-                        free.append(cur)
-            return player_match
-
-        best = np.inf
-        for _ in range(max(1, approx_samples)):
-            m = sampled_player_gs()
-            if self.is_stable_matching(m):
-                total = float(np.sum(self.mu[np.arange(N), m]))
-                if total < best:
-                    best = total
-
-        if np.isfinite(best):
-            return best
-
-        return float(np.sum(np.max(self.mu, axis=1)))
+        return np.where(np.isfinite(per), per, fallback)
 
 
 def make_random_market(

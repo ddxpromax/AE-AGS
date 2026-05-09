@@ -62,7 +62,7 @@ class RandomMatchingPolicy:
             m[i] = arms[i]
         return m
 
-    def observe(self, matched_arm: np.ndarray, rewards: np.ndarray) -> None:
+    def observe(self, assigned_arm: np.ndarray, matched_arm: np.ndarray, rewards: np.ndarray) -> None:
         return
 
 
@@ -121,12 +121,12 @@ class CETCKnownDelta:
             self.commit_matching = self._build_commit(arm_rank)
         return self.commit_matching
 
-    def observe(self, matched_arm: np.ndarray, rewards: np.ndarray) -> None:
+    def observe(self, assigned_arm: np.ndarray, matched_arm: np.ndarray, rewards: np.ndarray) -> None:
         if self.phase != "explore":
             return
         for i in range(self.N):
-            a = int(matched_arm[i])
-            if a < 0:
+            a = int(assigned_arm[i])
+            if a < 0 or int(matched_arm[i]) != a:
                 continue
             c = self.counts[i, a]
             nc = c + 1
@@ -206,12 +206,12 @@ class PhasedETC:
 
         return self._explore_action()
 
-    def observe(self, matched_arm: np.ndarray, rewards: np.ndarray) -> None:
+    def observe(self, assigned_arm: np.ndarray, matched_arm: np.ndarray, rewards: np.ndarray) -> None:
         if self.phase_mode != "explore":
             return
         for i in range(self.N):
-            a = int(matched_arm[i])
-            if a < 0:
+            a = int(assigned_arm[i])
+            if a < 0 or int(matched_arm[i]) != a:
                 continue
             c = self.counts[i, a]
             nc = c + 1
