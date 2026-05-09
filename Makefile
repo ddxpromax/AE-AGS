@@ -1,4 +1,4 @@
-.PHONY: quick paper paper-j8 paper-json paper-plot sweep status
+.PHONY: quick paper paper-j8 paper-json paper-plot paper-figure1 sweep status
 
 # Exported as env for subprocesses; same defaults as scripts/parallel_defaults.sh. Override example:
 #   make paper-json PARALLEL_BLAS="OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4"
@@ -18,6 +18,9 @@ paper-json:
 
 paper-plot:
 	python -m ae_ags.plot_from_run_json --input-json results/paper_run/one_run_curve.json --output-dir results/paper_run/plots
+
+paper-figure1:
+	python -m ae_ags.plot_from_run_json --input-json results/paper_run/one_run_curve.json --output-dir results/paper_run/plots --paper-figure1
 
 sweep:
 	./run_appendix_e.sh

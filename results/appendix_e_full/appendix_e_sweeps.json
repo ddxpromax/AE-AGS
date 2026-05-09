@@ -1,9 +1,9 @@
 {
   "meta": {
-    "generated_at": "2026-05-08T15:29:31.060599+00:00",
+    "generated_at": "2026-05-09T15:15:36.158232+00:00",
     "T": 100000,
     "runs": 20,
-    "jobs": 8,
+    "jobs": 16,
     "seed": 0,
     "sigma": 1.0,
     "clip_rewards": 0,
@@ -23,24 +23,24 @@
         "delta": 0.1,
         "metrics": {
           "AE-AGS": {
-            "max_cumulative_stable_regret": -1353.9047953208724,
-            "mean_cumulative_stable_regret": -3958.900020288286,
-            "cumulative_market_unstability": 65964.55
+            "max_cumulative_stable_regret": 14922.577760009324,
+            "mean_cumulative_stable_regret": 11129.169793919928,
+            "cumulative_market_unstability": 81324.0
           },
           "C-ETC": {
-            "max_cumulative_stable_regret": 3365.1710432850755,
-            "mean_cumulative_stable_regret": -1515.7597172757091,
-            "cumulative_market_unstability": 92596.2
+            "max_cumulative_stable_regret": 513.55590020153,
+            "mean_cumulative_stable_regret": -1478.8057858013594,
+            "cumulative_market_unstability": 22569.4
           },
           "P-ETC": {
-            "max_cumulative_stable_regret": -2854.930653326105,
-            "mean_cumulative_stable_regret": -5530.330998167016,
-            "cumulative_market_unstability": 51002.9
+            "max_cumulative_stable_regret": 10978.337072275563,
+            "mean_cumulative_stable_regret": 8413.971231539976,
+            "cumulative_market_unstability": 97969.7
           },
           "Random": {
-            "max_cumulative_stable_regret": -165.95637876900182,
-            "mean_cumulative_stable_regret": -2004.972144376918,
-            "cumulative_market_unstability": 93045.7
+            "max_cumulative_stable_regret": 11020.61348331705,
+            "mean_cumulative_stable_regret": 8493.518937590223,
+            "cumulative_market_unstability": 98710.25
           }
         }
       },
@@ -48,24 +48,24 @@
         "delta": 0.15,
         "metrics": {
           "AE-AGS": {
-            "max_cumulative_stable_regret": -2562.4277644144263,
-            "mean_cumulative_stable_regret": -6936.037782659043,
-            "cumulative_market_unstability": 61013.7
+            "max_cumulative_stable_regret": 10208.285080575999,
+            "mean_cumulative_stable_regret": 5372.174302195504,
+            "cumulative_market_unstability": 72411.95
           },
           "C-ETC": {
-            "max_cumulative_stable_regret": -649.6796631563969,
-            "mean_cumulative_stable_regret": -4387.677639373074,
-            "cumulative_market_unstability": 79038.95
+            "max_cumulative_stable_regret": -1892.2815872022452,
+            "mean_cumulative_stable_regret": -4349.395285801356,
+            "cumulative_market_unstability": 10030.3
           },
           "P-ETC": {
-            "max_cumulative_stable_regret": -3684.3607839593797,
-            "mean_cumulative_stable_regret": -9056.369516036526,
-            "cumulative_market_unstability": 79995.15
+            "max_cumulative_stable_regret": 16034.64653413706,
+            "mean_cumulative_stable_regret": 12549.88773153995,
+            "cumulative_market_unstability": 97750.3
           },
           "Random": {
-            "max_cumulative_stable_regret": -169.87322279673344,
-            "mean_cumulative_stable_regret": -3003.4177540644687,
-            "cumulative_market_unstability": 93045.7
+            "max_cumulative_stable_regret": 16272.195983317011,
+            "mean_cumulative_stable_regret": 12674.448937590172,
+            "cumulative_market_unstability": 98710.25
           }
         }
       },
@@ -73,24 +73,24 @@
         "delta": 0.2,
         "metrics": {
           "AE-AGS": {
-            "max_cumulative_stable_regret": -3548.454847024937,
-            "mean_cumulative_stable_regret": -10413.639990470974,
-            "cumulative_market_unstability": 59685.4
+            "max_cumulative_stable_regret": 10560.987581994186,
+            "mean_cumulative_stable_regret": 3163.7393781198007,
+            "cumulative_market_unstability": 73017.85
           },
           "C-ETC": {
-            "max_cumulative_stable_regret": -6985.111489794697,
-            "mean_cumulative_stable_regret": -12924.046975441412,
-            "cumulative_market_unstability": 44472.15
+            "max_cumulative_stable_regret": -3491.0636283297013,
+            "mean_cumulative_stable_regret": -7352.0857858013405,
+            "cumulative_market_unstability": 5644.8
           },
           "P-ETC": {
-            "max_cumulative_stable_regret": -4529.848062976956,
-            "mean_cumulative_stable_regret": -9646.180850766928,
-            "cumulative_market_unstability": 73316.65
+            "max_cumulative_stable_regret": 21450.553403505088,
+            "mean_cumulative_stable_regret": 16293.928231539921,
+            "cumulative_market_unstability": 95994.15
           },
           "Random": {
-            "max_cumulative_stable_regret": -222.1492401395846,
-            "mean_cumulative_stable_regret": -4014.7943271890276,
-            "cumulative_market_unstability": 93045.7
+            "max_cumulative_stable_regret": 22021.40348331687,
+            "mean_cumulative_stable_regret": 16894.881937590115,
+            "cumulative_market_unstability": 98710.25
           }
         }
       },
@@ -98,24 +98,24 @@
         "delta": 0.25,
         "metrics": {
           "AE-AGS": {
-            "max_cumulative_stable_regret": -4082.0750532060993,
-            "mean_cumulative_stable_regret": -11276.723948653878,
-            "cumulative_market_unstability": 54685.2
+            "max_cumulative_stable_regret": 3107.4893200535907,
+            "mean_cumulative_stable_regret": -1220.4869917818353,
+            "cumulative_market_unstability": 67635.0
           },
           "C-ETC": {
-            "max_cumulative_stable_regret": -9608.696191902622,
-            "mean_cumulative_stable_regret": -18237.10080356424,
-            "cumulative_market_unstability": 28439.05
+            "max_cumulative_stable_regret": -5010.176320337742,
+            "mean_cumulative_stable_regret": -9847.445785801403,
+            "cumulative_market_unstability": 3611.3
           },
           "P-ETC": {
-            "max_cumulative_stable_regret": -10545.178351725703,
-            "mean_cumulative_stable_regret": -15952.343601491128,
-            "cumulative_market_unstability": 60042.9
+            "max_cumulative_stable_regret": 24298.914672139417,
+            "mean_cumulative_stable_regret": 18396.862731539957,
+            "cumulative_market_unstability": 89972.95
           },
           "Random": {
-            "max_cumulative_stable_regret": -376.1720203929391,
-            "mean_cumulative_stable_regret": -5031.916235490444,
-            "cumulative_market_unstability": 93045.7
+            "max_cumulative_stable_regret": 27521.798483316932,
+            "mean_cumulative_stable_regret": 21095.56343759012,
+            "cumulative_market_unstability": 98710.25
           }
         }
       }
@@ -134,24 +134,24 @@
         "K": 3,
         "metrics": {
           "AE-AGS": {
-            "max_cumulative_stable_regret": 181.1524304548539,
-            "mean_cumulative_stable_regret": -1248.7326527617167,
-            "cumulative_market_unstability": 41748.1
+            "max_cumulative_stable_regret": 11971.482847118297,
+            "mean_cumulative_stable_regret": 9371.668479844324,
+            "cumulative_market_unstability": 58594.9
           },
           "C-ETC": {
-            "max_cumulative_stable_regret": -851.0064262821758,
-            "mean_cumulative_stable_regret": -2084.204053118409,
-            "cumulative_market_unstability": 41459.25
+            "max_cumulative_stable_regret": 41.37171460713735,
+            "mean_cumulative_stable_regret": -623.3508210967849,
+            "cumulative_market_unstability": 11054.4
           },
           "P-ETC": {
-            "max_cumulative_stable_regret": 19.260318946324883,
-            "mean_cumulative_stable_regret": -3937.274045174963,
-            "cumulative_market_unstability": 25076.7
+            "max_cumulative_stable_regret": 4947.31380906099,
+            "mean_cumulative_stable_regret": 3794.780314011857,
+            "cumulative_market_unstability": 79898.4
           },
           "Random": {
-            "max_cumulative_stable_regret": -100.80534299798796,
-            "mean_cumulative_stable_regret": -1543.193186562087,
-            "cumulative_market_unstability": 48291.95
+            "max_cumulative_stable_regret": 4870.572249066849,
+            "mean_cumulative_stable_regret": 3895.5159726694187,
+            "cumulative_market_unstability": 79967.75
           }
         }
       },
@@ -160,24 +160,24 @@
         "K": 6,
         "metrics": {
           "AE-AGS": {
-            "max_cumulative_stable_regret": 4099.431511415341,
-            "mean_cumulative_stable_regret": -2883.6044048742474,
-            "cumulative_market_unstability": 74913.1
+            "max_cumulative_stable_regret": 20354.550772080427,
+            "mean_cumulative_stable_regret": 14283.55407542843,
+            "cumulative_market_unstability": 92033.1
           },
           "C-ETC": {
-            "max_cumulative_stable_regret": 3555.82549449399,
-            "mean_cumulative_stable_regret": -2652.061561407185,
-            "cumulative_market_unstability": 97657.7
+            "max_cumulative_stable_regret": 2048.982670744189,
+            "mean_cumulative_stable_regret": -2876.0007588451117,
+            "cumulative_market_unstability": 27405.7
           },
           "P-ETC": {
-            "max_cumulative_stable_regret": 1889.7160841930643,
-            "mean_cumulative_stable_regret": -7230.981737155359,
-            "cumulative_market_unstability": 75078.3
+            "max_cumulative_stable_regret": 16303.719333632598,
+            "mean_cumulative_stable_regret": 10254.451136712445,
+            "cumulative_market_unstability": 99151.8
           },
           "Random": {
-            "max_cumulative_stable_regret": 6202.104329221374,
-            "mean_cumulative_stable_regret": -2071.9217728516437,
-            "cumulative_market_unstability": 98536.25
+            "max_cumulative_stable_regret": 16649.427878074235,
+            "mean_cumulative_stable_regret": 10273.63563878785,
+            "cumulative_market_unstability": 99725.65
           }
         }
       },
@@ -186,24 +186,24 @@
         "K": 9,
         "metrics": {
           "AE-AGS": {
-            "max_cumulative_stable_regret": 16096.657992297725,
-            "mean_cumulative_stable_regret": 8034.4911978778855,
-            "cumulative_market_unstability": 99937.15
+            "max_cumulative_stable_regret": 41228.93305133414,
+            "mean_cumulative_stable_regret": 26135.932852859827,
+            "cumulative_market_unstability": 99950.3
           },
           "C-ETC": {
-            "max_cumulative_stable_regret": 17047.185044107027,
-            "mean_cumulative_stable_regret": 9389.423236442199,
-            "cumulative_market_unstability": 100000.0
+            "max_cumulative_stable_regret": 13331.834740082835,
+            "mean_cumulative_stable_regret": 11084.051981056935,
+            "cumulative_market_unstability": 41454.0
           },
           "P-ETC": {
-            "max_cumulative_stable_regret": 10126.235566999565,
-            "mean_cumulative_stable_regret": 3798.986636539444,
-            "cumulative_market_unstability": 96748.85
+            "max_cumulative_stable_regret": 31355.179801208164,
+            "mean_cumulative_stable_regret": 26573.77415109467,
+            "cumulative_market_unstability": 99993.1
           },
           "Random": {
-            "max_cumulative_stable_regret": 17436.160213211282,
-            "mean_cumulative_stable_regret": 9159.835069436198,
-            "cumulative_market_unstability": 99985.3
+            "max_cumulative_stable_regret": 31440.838830242523,
+            "mean_cumulative_stable_regret": 26580.341251027457,
+            "cumulative_market_unstability": 99999.3
           }
         }
       },
@@ -212,24 +212,24 @@
         "K": 12,
         "metrics": {
           "AE-AGS": {
-            "max_cumulative_stable_regret": 41059.5323133874,
-            "mean_cumulative_stable_regret": 20106.710473874886,
-            "cumulative_market_unstability": 99999.75
+            "max_cumulative_stable_regret": 33201.586699595406,
+            "mean_cumulative_stable_regret": 27891.72124536414,
+            "cumulative_market_unstability": 100000.0
           },
           "C-ETC": {
-            "max_cumulative_stable_regret": 30913.996475849777,
-            "mean_cumulative_stable_regret": 20671.563883497907,
-            "cumulative_market_unstability": 100000.0
+            "max_cumulative_stable_regret": 25008.154061766738,
+            "mean_cumulative_stable_regret": 22130.03697986733,
+            "cumulative_market_unstability": 55272.0
           },
           "P-ETC": {
-            "max_cumulative_stable_regret": 23885.92091460615,
-            "mean_cumulative_stable_regret": 12991.287801858634,
-            "cumulative_market_unstability": 100000.0
+            "max_cumulative_stable_regret": 44465.38769091756,
+            "mean_cumulative_stable_regret": 39929.165189956315,
+            "cumulative_market_unstability": 99993.0
           },
           "Random": {
-            "max_cumulative_stable_regret": 33170.477742994284,
-            "mean_cumulative_stable_regret": 21373.718353025713,
-            "cumulative_market_unstability": 99999.95
+            "max_cumulative_stable_regret": 44704.13898783477,
+            "mean_cumulative_stable_regret": 40003.47138175547,
+            "cumulative_market_unstability": 100000.0
           }
         }
       }

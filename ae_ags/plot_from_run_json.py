@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
+from .paper_figure1 import plot_paper_figure1
+
 
 def _get_algorithms(summary: Dict[str, Any], requested: List[str] | None) -> List[str]:
     algs = list(summary.keys())
@@ -19,6 +21,17 @@ def main() -> None:
     parser.add_argument("--input-json", type=str, required=True, help="Path to run_experiment --save-json output")
     parser.add_argument("--output-dir", type=str, default=None, help="Directory for generated plots")
     parser.add_argument("--algs", type=str, default=None, help="Comma-separated algorithms to plot")
+    parser.add_argument(
+        "--paper-figure1",
+        action="store_true",
+        help="Also write Figure 1 style 3x2 panel PNG (Appendix E layout: per-player regret + unstability).",
+    )
+    parser.add_argument(
+        "--paper-figure1-name",
+        type=str,
+        default="figure1_paper_sixpanels.png",
+        help="Filename for --paper-figure1 (inside output-dir).",
+    )
     args = parser.parse_args()
 
     in_path = Path(args.input_json)
@@ -87,7 +100,15 @@ def main() -> None:
             f"unstability={s['cumulative_market_unstability']:.4f}"
         )
     summary_txt.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Saved plots:\n- {p1}\n- {p2}\nSaved text summary:\n- {summary_txt}")
+    extras = []
+    if args.paper_figure1:
+        f1_path = out_dir / args.paper_figure1_name
+        plot_paper_figure1(payload, f1_path)
+        extras.append(str(f1_path))
+    print(
+        f"Saved plots:\n- {p1}\n- {p2}\nSaved text summary:\n- {summary_txt}"
+        + (f"\nPaper Figure 1 layout:\n- {extras[0]}" if extras else "")
+    )
 
 
 if __name__ == "__main__":

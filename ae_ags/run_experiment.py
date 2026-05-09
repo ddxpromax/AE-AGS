@@ -36,6 +36,9 @@ PRESETS = {
         "runs": 3,
         "record_every": 500,
         "market_model": "paper_rank",
+        "aeags_confidence_factor": 6.0,
+        "c_etc_log_coeff": 2.0,
+        "p_etc_explore_coef": 0.5,
     },
     "paper_default": {
         "N": 5,
@@ -49,6 +52,12 @@ PRESETS = {
         "runs": 20,
         "record_every": 1000,
         "market_model": "paper_rank",
+        # Appendix E-style baselines (Gaussian tie-break before offline GS; resolve_round tie-break is random).
+        # C-ETC exploratory length ~ theta*ln(T)/Delta^2 per pair. Theorem-scale theta~4 is conservative;
+        # theta~8.35 aligns 8-run means near Appendix Fig.1(f) cumulative unstability (~43% unstable rounds for C-ETC at T=100k).
+        "aeags_confidence_factor": 6.0,
+        "c_etc_log_coeff": 8.35,
+        "p_etc_explore_coef": 0.52,
     },
     "paper_clean": {
         "N": 5,
@@ -62,6 +71,9 @@ PRESETS = {
         "runs": 20,
         "record_every": 1000,
         "market_model": "paper_rank",
+        "aeags_confidence_factor": 6.0,
+        "c_etc_log_coeff": 8.35,
+        "p_etc_explore_coef": 0.52,
     },
 }
 
@@ -91,6 +103,9 @@ def _resolve_args(args: argparse.Namespace) -> argparse.Namespace:
         "jobs": 1,
         "record_every": 0,
         "market_model": "paper_rank",
+        "aeags_confidence_factor": 6.0,
+        "c_etc_log_coeff": 4.0,
+        "p_etc_explore_coef": 0.52,
     }
     preset_vals = PRESETS.get(args.preset, {})
     cfg_vals = _load_json_config(args.config)
@@ -176,19 +191,29 @@ def _aggregate_results(agg: Dict[str, List[RunResult]]) -> Dict[str, Dict[str, A
             curve_unst = np.stack([r.curve_unstable for r in runs], axis=0)
             max_curve = np.max(curve_sr, axis=2)
             mean_curve = np.mean(curve_sr, axis=2)
+            n_std = np.sqrt(max(1, len(runs)))
+            # Per-player cumulative stable regret trajectories (paper Figure 1 (a)-(e)).
+            ppm = np.mean(curve_sr, axis=0)
+            ppe = np.std(curve_sr, axis=0, ddof=0) / n_std
             payload["curve"] = {
                 "steps": [int(s) for s in steps.tolist()],
                 "max_stable_regret_mean": [float(v) for v in np.mean(max_curve, axis=0).tolist()],
                 "max_stable_regret_se": [
-                    float(v) for v in (np.std(max_curve, axis=0, ddof=0) / np.sqrt(max(1, len(runs)))).tolist()
+                    float(v) for v in (np.std(max_curve, axis=0, ddof=0) / n_std).tolist()
                 ],
                 "mean_stable_regret_mean": [float(v) for v in np.mean(mean_curve, axis=0).tolist()],
                 "mean_stable_regret_se": [
-                    float(v) for v in (np.std(mean_curve, axis=0, ddof=0) / np.sqrt(max(1, len(runs)))).tolist()
+                    float(v) for v in (np.std(mean_curve, axis=0, ddof=0) / n_std).tolist()
+                ],
+                "per_player_stable_regret_mean": [
+                    [float(v) for v in ppm[:, pi].tolist()] for pi in range(ppm.shape[1])
+                ],
+                "per_player_stable_regret_se": [
+                    [float(v) for v in ppe[:, pi].tolist()] for pi in range(ppe.shape[1])
                 ],
                 "unstability_mean": [float(v) for v in np.mean(curve_unst, axis=0).tolist()],
                 "unstability_se": [
-                    float(v) for v in (np.std(curve_unst, axis=0, ddof=0) / np.sqrt(max(1, len(runs)))).tolist()
+                    float(v) for v in (np.std(curve_unst, axis=0, ddof=0) / n_std).tolist()
                 ],
             }
         out[name] = payload
@@ -207,6 +232,9 @@ def run_one_repeat(
     record_every: int,
     seed: int,
     run_index: int,
+    aeags_confidence_factor: float = 6.0,
+    c_etc_log_coeff: float = 4.0,
+    p_etc_explore_coef: float = 0.52,
 ) -> Dict[str, RunResult]:
     market = make_random_market(
         n_players,
@@ -220,9 +248,30 @@ def run_one_repeat(
     regret_ref_rng = np.random.default_rng(seed + 424242 + run_index)
     regret_reference_mu = market.stable_regret_reference_per_player(rng=regret_ref_rng)
 
-    aeags = AEAGSCentralized(n_players, n_arms, horizon, seed=seed + run_index, market=market)
-    c_etc = CETCKnownDelta(n_players, n_arms, horizon, delta=delta, seed=seed + run_index)
-    p_etc = PhasedETC(n_players, n_arms, horizon, delta=delta, seed=seed + run_index)
+    aeags = AEAGSCentralized(
+        n_players,
+        n_arms,
+        horizon,
+        seed=seed + run_index,
+        market=market,
+        confidence_factor=float(aeags_confidence_factor),
+    )
+    c_etc = CETCKnownDelta(
+        n_players,
+        n_arms,
+        horizon,
+        delta=delta,
+        seed=seed + run_index,
+        log_coeff=float(c_etc_log_coeff),
+    )
+    p_etc = PhasedETC(
+        n_players,
+        n_arms,
+        horizon,
+        delta=delta,
+        seed=seed + run_index,
+        explore_coef=float(p_etc_explore_coef),
+    )
     rnd = RandomMatchingPolicy(n_players, n_arms, seed=seed + run_index)
 
     return {
@@ -248,8 +297,31 @@ def main() -> None:
     parser.add_argument("--runs", type=int, default=None)
     parser.add_argument("--jobs", type=int, default=None, help="Parallel worker processes for runs.")
     parser.add_argument("--record-every", type=int, default=None, help="Record curve every N steps. 0 disables.")
-    parser.add_argument("--market-model", type=str, choices=["paper_rank", "level_uniform"], default=None)
+    parser.add_argument(
+        "--market-model",
+        type=str,
+        choices=["paper_rank", "paper_strict_perm", "level_uniform"],
+        default=None,
+    )
     parser.add_argument("--save-json", type=str, default=None, help="Optional path to save summary JSON.")
+    parser.add_argument(
+        "--aeags-confidence-factor",
+        type=float,
+        default=None,
+        help="AE-AGS UCB/LCB rad uses sqrt(this * log T / counts); paper theory uses 6 (default preset).",
+    )
+    parser.add_argument(
+        "--c-etc-log-coeff",
+        type=float,
+        default=None,
+        help="Centralized ETC pulls per directed pair ≃ coeff * ln(T)/Δ² (Appendix Eq. order match).",
+    )
+    parser.add_argument(
+        "--p-etc-explore-coef",
+        type=float,
+        default=None,
+        help="P-ETC explore length multiplier on (s+1)*ln(T)/Δ² per phased round block.",
+    )
     args = _resolve_args(parser.parse_args())
 
     alg_names = ["AE-AGS", "C-ETC", "P-ETC", "Random"]
@@ -272,6 +344,9 @@ def main() -> None:
                 int(args.record_every),
                 args.seed,
                 r,
+                float(args.aeags_confidence_factor),
+                float(args.c_etc_log_coeff),
+                float(args.p_etc_explore_coef),
             )
             for name in alg_names:
                 agg[name].append(one[name])
@@ -292,6 +367,9 @@ def main() -> None:
                     int(args.record_every),
                     args.seed,
                     r,
+                    float(args.aeags_confidence_factor),
+                    float(args.c_etc_log_coeff),
+                    float(args.p_etc_explore_coef),
                 )
                 for r in range(args.runs)
             ]
@@ -303,7 +381,9 @@ def main() -> None:
     print(
         f"Experiment: N={args.N}, K={args.K}, T={args.T}, delta={args.delta}, sigma={args.sigma}, "
         f"clip_rewards={int(clip_rewards)}, rectify_regret={int(rectify_regret)}, runs={args.runs}, jobs={jobs}, "
-        f"market_model={args.market_model}, record_every={int(args.record_every)}"
+        f"market_model={args.market_model}, record_every={int(args.record_every)}, "
+        f"aeags_CF={float(args.aeags_confidence_factor):.4g}, c_etc_log={float(args.c_etc_log_coeff):.4g}, "
+        f"p_etc_explore={float(args.p_etc_explore_coef):.4g}"
     )
 
     summary = _aggregate_results(agg)
@@ -333,6 +413,9 @@ def main() -> None:
                 "seed": int(args.seed),
                 "market_model": str(args.market_model),
                 "record_every": int(args.record_every),
+                "aeags_confidence_factor": float(args.aeags_confidence_factor),
+                "c_etc_log_coeff": float(args.c_etc_log_coeff),
+                "p_etc_explore_coef": float(args.p_etc_explore_coef),
             },
             "summary": summary,
         }

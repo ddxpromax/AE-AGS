@@ -4,3 +4,6 @@ results_smoke/
 results_smoke2/
 results_smoke3/
 results_smoke4/
+
+# Optional local run transcripts (credentials / noise-free logs)
+*.log

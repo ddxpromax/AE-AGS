@@ -62,7 +62,10 @@ class MatchingMarket:
         for a in range(K):
             if not proposers[a]:
                 continue
-            best_i = min(proposers[a], key=lambda i: self.arm_rank[a, i])
+            plist = list(proposers[a])
+            best_rank = min(self.arm_rank[a, i] for i in plist)
+            finalists = [i for i in plist if self.arm_rank[a, i] == best_rank]
+            best_i = int(finalists[int(rng.integers(0, len(finalists)))]) if len(finalists) > 1 else int(finalists[0])
             matched_arm[best_i] = a
             sampled = float(rng.normal(self.mu[best_i, a], self.sigma))
             if self.clip_rewards:
@@ -72,26 +75,34 @@ class MatchingMarket:
 
     def is_stable_matching(self, matched_arm: np.ndarray) -> bool:
         """
-        Weak stability check.
+        Stability as in the paper §3 / Appendix E experiments: blocking pair iff
+        µ_{i,j} > µ_{i,Āᵢ} strictly and π_{j,i} ≺ π_{j,Ā^{-1}_j} strictly (ties are never strict).
+
+        This must not break ties among equal µᵢ using an arbitrary total order — that falsely
+        flags many unstable rounds under indifferences.
         """
         N, K = self.mu.shape
         arm_partner = np.full(K, -1, dtype=int)
+        mu = self.mu.astype(float)
+        pi = self.arm_rank
+
         for i, a in enumerate(matched_arm):
             if 0 <= a < K:
+                if arm_partner[a] != -1:
+                    # two players claiming the same arm: not a feasible matching outcome
+                    return False
                 arm_partner[a] = i
 
-        inv_rank = self._player_inv_rank
-
         for i in range(N):
-            current = matched_arm[i]
-            current_rank = int(inv_rank[i, current]) if current >= 0 else K
-            for a in range(K):
-                if int(inv_rank[i, a]) >= current_rank:
+            curr = int(matched_arm[i])
+            u_curr = float(mu[i, curr]) if curr >= 0 else float("-inf")
+            for j in range(K):
+                if not (float(mu[i, j]) > u_curr):
                     continue
-                partner = arm_partner[a]
+                partner = int(arm_partner[j])
                 if partner == -1:
                     return False
-                if self.arm_rank[a, i] < self.arm_rank[a, partner]:
+                if int(pi[j, i]) < int(pi[j, partner]):
                     return False
         return True
 
@@ -167,6 +178,25 @@ class MatchingMarket:
         return np.where(np.isfinite(per), per, fallback)
 
 
+def _values_from_discrete_positions(pos: np.ndarray, delta: float) -> np.ndarray:
+    """
+    Appendix E style: each coordinate is a rank bucket in {1,...,Pmax}.
+    Same bucket → same latent value; successive distinct buckets differ by Δ (μ decreases).
+    """
+    pos = pos.astype(np.int64, copy=False)
+    uniq = np.sort(np.unique(pos))
+    tier_mu = {int(p): float(1.0 - t * delta) for t, p in enumerate(uniq)}
+    return np.array([tier_mu[int(p)] for p in pos], dtype=float)
+
+
+def _ordinal_tiers_low_best(pos: np.ndarray) -> np.ndarray:
+    """Integer ranks: smaller = more preferred (ties identical). Sorted unique ascending → tier 0,1,..."""
+    pos = pos.astype(np.int64, copy=False)
+    uniq = np.sort(np.unique(pos))
+    tier_idx = {int(p): np.int32(t) for t, p in enumerate(uniq)}
+    return np.array([tier_idx[int(p)] for p in pos], dtype=np.int32)
+
+
 def make_random_market(
     N: int,
     K: int,
@@ -180,13 +210,25 @@ def make_random_market(
     Generate a synthetic market with indifference.
     model:
       - "level_uniform": legacy uniform-level model.
-      - "paper_rank": rank-position model aligned with Appendix E description.
+      - "paper_rank": Appendix E (Fig.1/2): iid positions in {1,..,K} per (player,arm); same
+        bucket shares μ; tiers decrease by Δ; arms rank players symmetrically (positions in {1,..,N}).
+      - "paper_strict_perm": legacy strict permutation-of-slots (backward compatibility / ablation).
     """
     rng = np.random.default_rng(seed)
     mu = np.zeros((N, K), dtype=float)
     arm_rank = np.zeros((K, N), dtype=int)
 
     if model == "paper_rank":
+        # Text: "The position of each arm in a player's preference ranking is a random number
+        # in {1, 2, . . . , K} ... Arms sharing the same position ... same preference values ...
+        # gap ... between arms ranked in adjacent positions is set to ∆ = 0.1."
+        for i in range(N):
+            pos = rng.integers(1, K + 1, size=K, endpoint=False)
+            mu[i, :] = _values_from_discrete_positions(pos, delta)
+        for j in range(K):
+            pos_players = rng.integers(1, N + 1, size=N, endpoint=False)
+            arm_rank[j, :] = _ordinal_tiers_low_best(pos_players)
+    elif model == "paper_strict_perm":
         for i in range(N):
             positions = np.arange(K)
             rng.shuffle(positions)

@@ -139,7 +139,12 @@ def main() -> None:
     parser.add_argument("--sigma", type=float, default=1.0)
     parser.add_argument("--clip-rewards", type=int, choices=[0, 1], default=0)
     parser.add_argument("--rectify-regret", type=int, choices=[0, 1], default=0)
-    parser.add_argument("--market-model", type=str, choices=["paper_rank", "level_uniform"], default="paper_rank")
+    parser.add_argument(
+        "--market-model",
+        type=str,
+        choices=["paper_rank", "paper_strict_perm", "level_uniform"],
+        default="paper_rank",
+    )
     parser.add_argument("--record-every", type=int, default=0)
     parser.add_argument("--output-dir", type=str, default="results")
     args = parser.parse_args()

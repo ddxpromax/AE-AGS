@@ -2,10 +2,13 @@ Config:
 - K: 5
 - N: 5
 - T: 100000
+- aeags_confidence_factor: 6.0
+- c_etc_log_coeff: 8.35
 - clip_rewards: 0
 - delta: 0.1
 - jobs: 8
 - market_model: paper_rank
+- p_etc_explore_coef: 0.52
 - record_every: 1000
 - rectify_regret: 0
 - runs: 20
@@ -13,7 +16,7 @@ Config:
 - sigma: 1.0
 
 Final metrics (from summary):
-- AE-AGS: max_regret=-228.5678, mean_regret=-2598.9841, unstability=73604.0500
-- C-ETC: max_regret=2646.7884, mean_regret=-398.6037, unstability=90709.8500
-- P-ETC: max_regret=-1493.2715, mean_regret=-4113.0878, unstability=60191.8500
-- Random: max_regret=2618.3422, mean_regret=-1021.5260, unstability=93009.5500
+- AE-AGS: max_regret=1522.5145, mean_regret=-264.7806, unstability=68933.9000
+- C-ETC: max_regret=-2694.1318, mean_regret=-4517.4583, unstability=43263.0000
+- P-ETC: max_regret=1520.3166, mean_regret=-845.9090, unstability=89885.6500
+- Random: max_regret=1607.3477, mean_regret=-827.4260, unstability=93009.5500

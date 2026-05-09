@@ -75,6 +75,17 @@ python -m ae_ags.plot_from_run_json \
   --output-dir results/paper_run/plots
 ```
 
+Appendix **Figure 1** (six panels: regret for \(p_1,\ldots,p_5\) plus cumulative market unstability; three algorithms):
+
+```bash
+python -m ae_ags.plot_from_run_json \
+  --input-json results/paper_run/one_run_curve.json \
+  --output-dir results/paper_run/plots \
+  --paper-figure1
+# `make paper-figure1` if JSON already exists under results/paper_run/
+```
+(Re-save JSON after upgrading the repo so `curve` contains `per_player_stable_regret_mean` / `..._se`.)
+
 ### 4) Full Appendix E sweep
 ```bash
 ./run_appendix_e.sh
@@ -100,6 +111,12 @@ Implementation-side (already in code): **`is_stable_matching` reuses cached play
 ---
 
 ## Notes on Metrics
+
+- **Market stability** mirrors the blocking-pair definition in the paper §3: a pair `(p_i,a_j)` blocks only when **`µ_{i,j} > µ_{i,Ā_i}` strictly** **and** the arm **`π_{j,i} ≺ π_{j, partner}` strictly**. Tied `µ` or tied `π` must not invent a bogus strict order (`argsort` tie-breaking was removed for stability checks).
+
+- Arms break ties among equally preferred proposers **uniformly at random**, per the paper §3 (**`resolve_round`** uses shared `rng`), instead of deterministic lowest player index only.
+
+- **Appendix Fig. 1 knobs** (see `configs/paper_default.json`): `aeags_confidence_factor` stays at the theoretical `6` inside `sqrt(factor · ln(T) / T_ij)` for AE-AGS. `c_etc_log_coeff` scales C-ETC pulls per directed pair as `coeff · ln(T)/Δ²`. A **theorem-style** choice is `coeff≈4`, but at `T=100k` it undershoots the cumulative unstability in Fig. 1(f); the default **`coeff≈8.35`** is an empirical match so C-ETC’s *mean* unstability sits near **≈43%** of rounds in repeated runs at `T=100k` (tune via `--c-etc-log-coeff`; authors do not publish the exact scripted constant). `p_etc_explore_coef` scales phased exploration length. Offline GS commits apply tiny Gaussian perturbations to `μ̂` before player-proposing GS (Appendix B style ties).
 
 - **Stable regret (paper Eq. (1))** uses a per-player *regret reference* (not an algorithm baseline like C-ETC):
   \(\mu_{i,m_i}=\min_{\text{stable }m'}\mu_{i,m'(i)}\), computed in

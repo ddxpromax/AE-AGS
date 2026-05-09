@@ -28,11 +28,13 @@ class AEAGSCentralized:
         horizon: int,
         seed: int = 0,
         market: Optional["MatchingMarket"] = None,
+        confidence_factor: float = 6.0,
     ):
         self.N = n_players
         self.K = n_arms
         self.T = max(2, horizon)
         self._log_T = float(np.log(self.T))
+        self._confidence_factor = float(confidence_factor)
         self.rng = np.random.default_rng(seed)
         self.state = AEAGSState(
             mu_hat=np.zeros((self.N, self.K), dtype=float),
@@ -49,7 +51,7 @@ class AEAGSCentralized:
         mu_hat = self.state.mu_hat
         rad = np.zeros_like(mu_hat)
         positive = counts > 0
-        rad[positive] = np.sqrt(6.0 * self._log_T / counts[positive])
+        rad[positive] = np.sqrt(self._confidence_factor * self._log_T / counts[positive])
         ucb = np.where(positive, mu_hat + rad, np.inf)
         lcb = np.where(positive, mu_hat - rad, -np.inf)
         return ucb, lcb
@@ -85,20 +87,22 @@ class AEAGSCentralized:
             valid = [j for j in candidates if j not in subopt]
             if not valid:
                 valid = candidates
-            # Pick least explored among valid arms.
-            cnt = self.state.counts[i, valid]
-            best_idx = int(np.argmin(cnt))
-            return int(valid[best_idx])
+            cnt = np.array([self.state.counts[i, j] for j in valid])
+            vmin = int(np.min(cnt))
+            tied = np.flatnonzero(cnt == vmin).astype(int)
+            pick = tied[int(self.rng.integers(0, len(tied)))]
+            return int(valid[int(pick)])
 
         while True:
-            # Find an unmatched arm that still has players to propose.
-            a = -1
-            for j in range(self.K):
-                if arm_match[j] == -1 and s[j] < self.N:
-                    a = j
-                    break
-            if a == -1:
+            # ∃ unmatched arm ... (Paper): break ties uniformly among eligible arms — affects GS path under indifferences.
+            candidates_a = [
+                int(j)
+                for j in range(self.K)
+                if arm_match[j] == -1 and s[j] < self.N
+            ]
+            if not candidates_a:
                 break
+            a = int(self.rng.choice(candidates_a))
 
             # Arm a proposes to its s[a]-th preferred player.
             i = int(order[a, s[a]])
@@ -106,6 +110,11 @@ class AEAGSCentralized:
 
             # Player i chooses among available arms with AE-AGS rule.
             chosen = choose_player_arm(i)
+            # If chosen arm was matched to another player, break that match first
+            prev_holder = int(arm_match[chosen])
+            if prev_holder != -1 and prev_holder != i:
+                player_match[prev_holder] = -1
+
             old = int(player_match[i])
             player_match[i] = chosen
             arm_match[chosen] = i
@@ -121,6 +130,7 @@ class AEAGSCentralized:
                     continue
                 arm_match[rej] = -1
                 s[rej] += 1
+            available[i].clear()
         return player_match
 
     def assign_actions(self, arm_rank: np.ndarray) -> np.ndarray:

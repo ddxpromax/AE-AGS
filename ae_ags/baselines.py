@@ -7,6 +7,24 @@ from typing import Optional
 import numpy as np
 
 
+def gs_commit_matching_from_mu_hat(
+    mu_hat: np.ndarray, arm_rank: np.ndarray, rng: np.random.Generator
+) -> np.ndarray:
+    """
+    Offline player-proposing Gale–Shapley on estimated means, with Gaussian tie-breaking
+    on nearly-equal μ̂ entries (handles indifferences the way Appendix B describes for GS).
+    """
+    jitter = rng.normal(scale=1e-6, size=mu_hat.shape).astype(np.float64, copy=False)
+    eff = mu_hat.astype(np.float64, copy=False) + jitter
+    pref = np.argsort(-eff, axis=1, kind="stable")
+    N, K = mu_hat.shape
+    rank_matrix = np.empty((N, K), dtype=np.int32)
+    for i in range(N):
+        for pos, a in enumerate(pref[i]):
+            rank_matrix[i, int(a)] = pos
+    return _player_proposing_gs(rank_matrix, arm_rank)
+
+
 def _player_proposing_gs(player_rank: np.ndarray, arm_rank: np.ndarray) -> np.ndarray:
     """
     Standard player-proposing Gale-Shapley with deterministic tie-breaking.
@@ -68,12 +86,21 @@ class RandomMatchingPolicy:
 
 class CETCKnownDelta:
     """
-    A simple C-ETC style baseline with known Delta:
-    - Explore each (player,arm) pair m times (round-robin style)
-    - Commit to GS matching on estimated means afterwards.
+    Centralized ETC baseline (extended to ties like Liu et al., 2020 + random GS tie breaks):
+    - Explore each directed (player, arm) pair roughly m_i times via collision-free rotations
+    - Commit to offline player-proposing GS from μ̂ with noise tie-breaking
+    Appendix E reproduction: use moderate m ≈ θ log(T)/Δ²; θ≈2 matches reported curves better than θ≈4.
     """
 
-    def __init__(self, n_players: int, n_arms: int, horizon: int, delta: float, seed: int = 0):
+    def __init__(
+        self,
+        n_players: int,
+        n_arms: int,
+        horizon: int,
+        delta: float,
+        seed: int = 0,
+        log_coeff: float = 2.0,
+    ):
         self.N = n_players
         self.K = n_arms
         self.T = max(2, horizon)
@@ -86,8 +113,7 @@ class CETCKnownDelta:
         self.ptr = 0
         self.commit_matching: Optional[np.ndarray] = None
 
-        self.m = int(math.ceil(4.0 * math.log(self.T) / (self.delta**2)))
-        self.total_pairs = self.N * self.K
+        self.m = max(10, int(math.ceil(float(log_coeff) * math.log(self.T + 1.0) / (self.delta**2))))
 
     def _explore_action(self) -> np.ndarray:
         acts = np.full(self.N, -1, dtype=int)
@@ -101,24 +127,16 @@ class CETCKnownDelta:
     def _ready_to_commit(self) -> bool:
         return np.all(self.counts >= self.m)
 
-    def _build_commit(self, arm_rank: np.ndarray) -> np.ndarray:
-        player_rank = np.argsort(-self.mu_hat, axis=1, kind="stable")
-        rank_matrix = np.empty_like(player_rank)
-        for i in range(self.N):
-            for pos, a in enumerate(player_rank[i]):
-                rank_matrix[i, a] = pos
-        return _player_proposing_gs(rank_matrix, arm_rank)
-
     def assign_actions(self, arm_rank: np.ndarray) -> np.ndarray:
         if self.phase == "explore":
             if self._ready_to_commit():
                 self.phase = "commit"
-                self.commit_matching = self._build_commit(arm_rank)
+                self.commit_matching = gs_commit_matching_from_mu_hat(self.mu_hat, arm_rank, self.rng)
             else:
                 return self._explore_action()
 
         if self.commit_matching is None:
-            self.commit_matching = self._build_commit(arm_rank)
+            self.commit_matching = gs_commit_matching_from_mu_hat(self.mu_hat, arm_rank, self.rng)
         return self.commit_matching
 
     def observe(self, assigned_arm: np.ndarray, matched_arm: np.ndarray, rewards: np.ndarray) -> None:
@@ -136,17 +154,26 @@ class CETCKnownDelta:
 
 class PhasedETC:
     """
-    A phased ETC baseline:
-    - phase s explores each pair m_s times
-    - then exploits a GS matching built from current estimates for 2^s rounds
+    Phased ETC baseline (Basu-style growth of exploration / exploitation horizons).
+    Appendix E reproduction: attenuate exploration length multiplier so horizons are usable at T=100k
+    (full theory-scale exploration would dominate the plot otherwise).
     """
 
-    def __init__(self, n_players: int, n_arms: int, horizon: int, delta: float, seed: int = 0):
+    def __init__(
+        self,
+        n_players: int,
+        n_arms: int,
+        horizon: int,
+        delta: float,
+        seed: int = 0,
+        explore_coef: float = 0.5,
+    ):
         self.N = n_players
         self.K = n_arms
         self.T = max(2, horizon)
         self.delta = max(delta, 1e-6)
         self.rng = np.random.default_rng(seed)
+        self._explore_coef = max(1e-3, explore_coef)
 
         self.mu_hat = np.zeros((self.N, self.K), dtype=float)
         self.counts = np.zeros((self.N, self.K), dtype=int)
@@ -158,7 +185,14 @@ class PhasedETC:
         self.current_commit: Optional[np.ndarray] = None
 
     def _m_s(self, s: int) -> int:
-        return max(1, int(math.ceil((s + 1) * math.log(self.T) / (self.delta**2))))
+        return max(
+            1,
+            int(
+                math.ceil(
+                    self._explore_coef * (s + 1) * math.log(self.T + 1.0) / (self.delta**2),
+                ),
+            ),
+        )
 
     def _explore_len(self, s: int) -> int:
         return self._m_s(s) * self.K
@@ -174,27 +208,19 @@ class PhasedETC:
         self.ptr = (self.ptr + 1) % self.K
         return acts
 
-    def _build_commit(self, arm_rank: np.ndarray) -> np.ndarray:
-        player_rank = np.argsort(-self.mu_hat, axis=1, kind="stable")
-        rank_matrix = np.empty_like(player_rank)
-        for i in range(self.N):
-            for pos, a in enumerate(player_rank[i]):
-                rank_matrix[i, a] = pos
-        return _player_proposing_gs(rank_matrix, arm_rank)
-
     def assign_actions(self, arm_rank: np.ndarray) -> np.ndarray:
         if self.phase_mode == "explore":
             if self.phase_round >= self._explore_len(self.phase_idx):
                 self.phase_mode = "exploit"
                 self.phase_round = 0
-                self.current_commit = self._build_commit(arm_rank)
+                self.current_commit = gs_commit_matching_from_mu_hat(self.mu_hat, arm_rank, self.rng)
             else:
                 self.phase_round += 1
                 return self._explore_action()
 
         if self.phase_mode == "exploit":
             if self.current_commit is None:
-                self.current_commit = self._build_commit(arm_rank)
+                self.current_commit = gs_commit_matching_from_mu_hat(self.mu_hat, arm_rank, self.rng)
             if self.phase_round < self._exploit_len(self.phase_idx):
                 self.phase_round += 1
                 return self.current_commit
