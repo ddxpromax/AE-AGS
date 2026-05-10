@@ -12,5 +12,9 @@
   "market_model": "paper_rank",
   "aeags_confidence_factor": 6.0,
   "c_etc_log_coeff": 8.35,
-  "p_etc_explore_coef": 0.52
+  "p_etc_explore_coef": 0.52,
+  "aeags_arm_schedule": "fixed",
+  "reward_noise_mode": "shared",
+  "aeags_player_pull_tiebreak": "random",
+  "aeags_ucb_time_scale": "horizon"
 }

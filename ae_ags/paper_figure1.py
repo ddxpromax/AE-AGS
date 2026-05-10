@@ -228,16 +228,26 @@ def plot_paper_figure1(
     ae_c = cfg.get("aeags_confidence_factor")
     cet = cfg.get("c_etc_log_coeff")
     pet = cfg.get("p_etc_explore_coef")
+    arm_s = cfg.get("aeags_arm_schedule", "?")
+    rnm = str(cfg.get("reward_noise_mode", "shared")).lower()
+    apt = cfg.get("aeags_player_pull_tiebreak", "?")
+    ucb_ts = cfg.get("aeags_ucb_time_scale", "?")
     footer = (
         f"Appendix E setup: N=K={cfg.get('N', '?')}, delta={cfg.get('delta', '?')}, "
         f"sigma={cfg.get('sigma', '?')}, T={cfg.get('T', '?')}, runs={cfg.get('runs', '?')}, "
         f"market_model={cfg.get('market_model', '?')}."
     )
     if ae_c is not None and cet is not None and pet is not None:
+        noise_note = (
+            "per-algorithm deterministic streams (--reward-noise-mode independent)."
+            if rnm == "independent"
+            else "(seed,t,i,a) keyed; shared across algos when matchings agree (--reward-noise-mode shared)."
+        )
+        ucb_note = "ln(t) radius (empirical)" if str(ucb_ts).lower() == "elapsed" else "ln(T) radius (paper)"
         footer += (
-            f" Repro knobs: aeags_rad_factor={ae_c} in sqrt(factor·ln(T)/T_ij); "
+            f" Repro knobs: aeags_rad_factor={ae_c} sqrt(factor·{ucb_note}/T_ij); "
             f"c_etc_log_coeff={cet}; p_etc_explore_coef={pet}; "
-            f"Gaussian rewards keyed by (seed,t,i,a) shared across algos."
+            f"AE-AGS arm_schedule={arm_s}; pull_tiebreak={apt}; reward noise: {noise_note}"
         )
     fig.text(0.5, 0.025, footer, ha="center", va="bottom", fontsize=6.5, transform=fig.transFigure)
 

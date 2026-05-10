@@ -29,12 +29,28 @@ class AEAGSCentralized:
         seed: int = 0,
         market: Optional["MatchingMarket"] = None,
         confidence_factor: float = 6.0,
+        arm_schedule: str = "fixed",
+        player_pull_tiebreak: str = "random",
+        ucb_time_scale: str = "horizon",
     ):
         self.N = n_players
         self.K = n_arms
         self.T = max(2, horizon)
         self._log_T = float(np.log(self.T))
         self._confidence_factor = float(confidence_factor)
+        self._round = 0
+        sched = str(arm_schedule).lower().replace("-", "_")
+        if sched not in ("fixed", "random", "round_robin"):
+            raise ValueError("arm_schedule must be 'fixed', 'random', or 'round_robin'.")
+        self._arm_schedule = sched
+        ptb = str(player_pull_tiebreak).lower().replace("-", "_")
+        if ptb not in ("random", "smallest_arm"):
+            raise ValueError("player_pull_tiebreak must be 'random' or 'smallest_arm'.")
+        self._player_pull_tiebreak = ptb
+        uts = str(ucb_time_scale).lower().replace("-", "_")
+        if uts not in ("horizon", "elapsed"):
+            raise ValueError("ucb_time_scale must be 'horizon' or 'elapsed'.")
+        self._ucb_time_scale = uts
         self.rng = np.random.default_rng(seed)
         self.state = AEAGSState(
             mu_hat=np.zeros((self.N, self.K), dtype=float),
@@ -51,7 +67,12 @@ class AEAGSCentralized:
         mu_hat = self.state.mu_hat
         rad = np.zeros_like(mu_hat)
         positive = counts > 0
-        rad[positive] = np.sqrt(self._confidence_factor * self._log_T / counts[positive])
+        log_scale = (
+            float(np.log(max(2.0, float(self._round))))
+            if self._ucb_time_scale == "elapsed"
+            else self._log_T
+        )
+        rad[positive] = np.sqrt(self._confidence_factor * log_scale / counts[positive])
         ucb = np.where(positive, mu_hat + rad, np.inf)
         lcb = np.where(positive, mu_hat - rad, -np.inf)
         return ucb, lcb
@@ -72,6 +93,21 @@ class AEAGSCentralized:
         s = np.zeros(self.K, dtype=int)  # current proposing rank s_j (0-indexed)
 
         order = propose_order
+        rr_cursor = 0
+
+        def pick_proposing_arm(candidates_a: list[int]) -> int:
+            nonlocal rr_cursor
+            if self._arm_schedule == "random":
+                return int(self.rng.choice(candidates_a))
+            if self._arm_schedule == "fixed":
+                return int(min(candidates_a))
+            cand_set = set(candidates_a)
+            for step in range(self.K):
+                a_try = (rr_cursor + step) % self.K
+                if a_try in cand_set:
+                    rr_cursor = (a_try + 1) % self.K
+                    return int(a_try)
+            return int(min(candidates_a))
 
         def choose_player_arm(i: int) -> int:
             candidates = sorted(available[i])
@@ -90,11 +126,15 @@ class AEAGSCentralized:
             cnt = np.array([self.state.counts[i, j] for j in valid])
             vmin = int(np.min(cnt))
             tied = np.flatnonzero(cnt == vmin).astype(int)
+            if self._player_pull_tiebreak == "smallest_arm":
+                arms_tied = [valid[int(idx)] for idx in tied]
+                return int(min(arms_tied))
             pick = tied[int(self.rng.integers(0, len(tied)))]
             return int(valid[int(pick)])
 
         while True:
-            # ∃ unmatched arm ... (Paper): break ties uniformly among eligible arms — affects GS path under indifferences.
+            # ∃ unmatched arm ... Algorithm 2 does not specify which arm moves when several are eligible;
+            # `fixed` / `round_robin` are deterministic schedules; `random` matches the older repo default.
             candidates_a = [
                 int(j)
                 for j in range(self.K)
@@ -102,11 +142,15 @@ class AEAGSCentralized:
             ]
             if not candidates_a:
                 break
-            a = int(self.rng.choice(candidates_a))
+            a = pick_proposing_arm(candidates_a)
 
             # Arm a proposes to its s[a]-th preferred player.
             i = int(order[a, s[a]])
             available[i].add(a)
+            # Algorithm 2: A_i accumulates candidates; include current tentative match m_i if any.
+            inc = int(player_match[i])
+            if inc != -1:
+                available[i].add(inc)
 
             # Player i chooses among available arms with AE-AGS rule.
             chosen = choose_player_arm(i)
@@ -115,16 +159,10 @@ class AEAGSCentralized:
             if prev_holder != -1 and prev_holder != i:
                 player_match[prev_holder] = -1
 
-            old = int(player_match[i])
             player_match[i] = chosen
             arm_match[chosen] = i
 
-            # Old matched arm of i gets rejected and moves to next player.
-            if old != -1 and old != chosen:
-                arm_match[old] = -1
-                s[old] += 1
-
-            # All non-chosen available arms are rejected by i.
+            # Reject every arm in A_i except the chosen (includes prior m_i when it lost).
             for rej in list(available[i]):
                 if rej == chosen:
                     continue
@@ -134,6 +172,7 @@ class AEAGSCentralized:
         return player_match
 
     def assign_actions(self, arm_rank: np.ndarray) -> np.ndarray:
+        self._round += 1
         if self._arm_propose_order is None:
             self._arm_propose_order = np.argsort(arm_rank, axis=1, kind="stable").astype(np.int32, copy=False)
         ucb, lcb = self._compute_confidence_bounds()

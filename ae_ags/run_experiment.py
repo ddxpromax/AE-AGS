@@ -39,6 +39,10 @@ PRESETS = {
         "aeags_confidence_factor": 6.0,
         "c_etc_log_coeff": 2.0,
         "p_etc_explore_coef": 0.5,
+        "aeags_arm_schedule": "fixed",
+        "reward_noise_mode": "shared",
+        "aeags_player_pull_tiebreak": "random",
+        "aeags_ucb_time_scale": "horizon",
     },
     "paper_default": {
         "N": 5,
@@ -58,6 +62,10 @@ PRESETS = {
         "aeags_confidence_factor": 6.0,
         "c_etc_log_coeff": 8.35,
         "p_etc_explore_coef": 0.52,
+        "aeags_arm_schedule": "fixed",
+        "reward_noise_mode": "shared",
+        "aeags_player_pull_tiebreak": "random",
+        "aeags_ucb_time_scale": "horizon",
     },
     "paper_clean": {
         "N": 5,
@@ -74,11 +82,25 @@ PRESETS = {
         "aeags_confidence_factor": 6.0,
         "c_etc_log_coeff": 8.35,
         "p_etc_explore_coef": 0.52,
+        "aeags_arm_schedule": "fixed",
+        "reward_noise_mode": "shared",
+        "aeags_player_pull_tiebreak": "random",
+        "aeags_ucb_time_scale": "horizon",
     },
 }
 
 
-def _load_json_config(path: str | None) -> Dict[str, float | int]:
+def _reward_experiment_seed_for_alg(base_seed: int, alg_name: str, mode: str) -> int:
+    """Shared streams pair policies at (t,i,a); independent adds a deterministic per-algorithm salt."""
+    if str(mode).lower() != "independent":
+        return int(base_seed)
+    salts = {"AE-AGS": 0, "C-ETC": 1_973_927, "P-ETC": 3_957_961, "Random": 5_943_943}
+    if alg_name not in salts:
+        raise ValueError(f"Unknown algorithm for reward noise: {alg_name}")
+    return int(base_seed) + salts[alg_name]
+
+
+def _load_json_config(path: str | None) -> Dict[str, Any]:
     if not path:
         return {}
     p = Path(path)
@@ -106,6 +128,10 @@ def _resolve_args(args: argparse.Namespace) -> argparse.Namespace:
         "aeags_confidence_factor": 6.0,
         "c_etc_log_coeff": 4.0,
         "p_etc_explore_coef": 0.52,
+        "aeags_arm_schedule": "fixed",
+        "reward_noise_mode": "shared",
+        "aeags_player_pull_tiebreak": "random",
+        "aeags_ucb_time_scale": "horizon",
     }
     preset_vals = PRESETS.get(args.preset, {})
     cfg_vals = _load_json_config(args.config)
@@ -245,7 +271,15 @@ def run_one_repeat(
     aeags_confidence_factor: float = 6.0,
     c_etc_log_coeff: float = 4.0,
     p_etc_explore_coef: float = 0.52,
+    aeags_arm_schedule: str = "fixed",
+    reward_noise_mode: str = "shared",
+    aeags_player_pull_tiebreak: str = "random",
+    aeags_ucb_time_scale: str = "horizon",
 ) -> Dict[str, RunResult]:
+    aeags_arm_schedule = str(aeags_arm_schedule).lower().replace("-", "_")
+    reward_noise_mode = str(reward_noise_mode).lower()
+    aeags_player_pull_tiebreak = str(aeags_player_pull_tiebreak).lower().replace("-", "_")
+    aeags_ucb_time_scale = str(aeags_ucb_time_scale).lower().replace("-", "_")
     market = make_random_market(
         n_players,
         n_arms,
@@ -267,6 +301,9 @@ def run_one_repeat(
         seed=seed + run_index,
         market=market,
         confidence_factor=float(aeags_confidence_factor),
+        arm_schedule=str(aeags_arm_schedule),
+        player_pull_tiebreak=str(aeags_player_pull_tiebreak),
+        ucb_time_scale=str(aeags_ucb_time_scale),
     )
     c_etc = CETCKnownDelta(
         n_players,
@@ -295,7 +332,7 @@ def run_one_repeat(
             rectify_regret,
             record_every,
             seed + 11,
-            reward_experiment_seed=reward_noise_seed,
+            reward_experiment_seed=_reward_experiment_seed_for_alg(reward_noise_seed, "AE-AGS", reward_noise_mode),
         ),
         "C-ETC": run_policy(
             market,
@@ -305,7 +342,7 @@ def run_one_repeat(
             rectify_regret,
             record_every,
             seed + 22,
-            reward_experiment_seed=reward_noise_seed,
+            reward_experiment_seed=_reward_experiment_seed_for_alg(reward_noise_seed, "C-ETC", reward_noise_mode),
         ),
         "P-ETC": run_policy(
             market,
@@ -315,7 +352,7 @@ def run_one_repeat(
             rectify_regret,
             record_every,
             seed + 33,
-            reward_experiment_seed=reward_noise_seed,
+            reward_experiment_seed=_reward_experiment_seed_for_alg(reward_noise_seed, "P-ETC", reward_noise_mode),
         ),
         "Random": run_policy(
             market,
@@ -325,7 +362,7 @@ def run_one_repeat(
             rectify_regret,
             record_every,
             seed + 44,
-            reward_experiment_seed=reward_noise_seed,
+            reward_experiment_seed=_reward_experiment_seed_for_alg(reward_noise_seed, "Random", reward_noise_mode),
         ),
     }
 
@@ -356,7 +393,7 @@ def main() -> None:
         "--aeags-confidence-factor",
         type=float,
         default=None,
-        help="AE-AGS UCB/LCB rad uses sqrt(this * log T / counts); paper theory uses 6 (default preset).",
+        help="AE-AGS UCB/LCB rad uses sqrt(this * logTerm / counts); logTerm from --aeags-ucb-time-scale; paper uses 6 and ln(T).",
     )
     parser.add_argument(
         "--c-etc-log-coeff",
@@ -370,6 +407,47 @@ def main() -> None:
         default=None,
         help="P-ETC explore length multiplier on (s+1)*ln(T)/Δ² per phased round block.",
     )
+    parser.add_argument(
+        "--aeags-arm-schedule",
+        type=str,
+        choices=["fixed", "random", "round_robin"],
+        default=None,
+        help=(
+            "Algorithm 2: which unmatched arm proposes when several are eligible. "
+            "`fixed`=lowest arm index (paper-style deterministic); "
+            "`round_robin`=cyclic scan; `random`=uniform (legacy)."
+        ),
+    )
+    parser.add_argument(
+        "--reward-noise-mode",
+        type=str,
+        choices=["shared", "independent"],
+        default=None,
+        help=(
+            "`shared`: reward noise keyed by (seed,t,i,a) matches across algorithms when matchings agree; "
+            "`independent`: separate deterministic stream per algorithm (Appendix E 'independent' noise per run)."
+        ),
+    )
+    parser.add_argument(
+        "--aeags-player-pull-tiebreak",
+        type=str,
+        choices=["random", "smallest_arm"],
+        default=None,
+        help=(
+            "Algorithm 2 / line 6 style: when multiple arms tie on min matched times, pick uniformly at random "
+            "or the smallest arm index (deterministic)."
+        ),
+    )
+    parser.add_argument(
+        "--aeags-ucb-time-scale",
+        type=str,
+        choices=["horizon", "elapsed"],
+        default=None,
+        help=(
+            "UCB/LCB radius log term: `horizon` = ln(T) as in the paper; `elapsed` = ln(t) at current round "
+            "(empirical only, not the stated theory bound)."
+        ),
+    )
     args = _resolve_args(parser.parse_args())
 
     alg_names = ["AE-AGS", "C-ETC", "P-ETC", "Random"]
@@ -377,6 +455,10 @@ def main() -> None:
     jobs = max(1, int(args.jobs))
     clip_rewards = bool(int(args.clip_rewards))
     rectify_regret = bool(int(args.rectify_regret))
+    arm_sched = str(args.aeags_arm_schedule).lower().replace("-", "_")
+    noise_mode = str(args.reward_noise_mode).lower()
+    pull_tb = str(args.aeags_player_pull_tiebreak).lower().replace("-", "_")
+    ucb_ts = str(args.aeags_ucb_time_scale).lower().replace("-", "_")
 
     if jobs == 1:
         for r in range(args.runs):
@@ -395,6 +477,10 @@ def main() -> None:
                 float(args.aeags_confidence_factor),
                 float(args.c_etc_log_coeff),
                 float(args.p_etc_explore_coef),
+                arm_sched,
+                noise_mode,
+                pull_tb,
+                ucb_ts,
             )
             for name in alg_names:
                 agg[name].append(one[name])
@@ -418,6 +504,10 @@ def main() -> None:
                     float(args.aeags_confidence_factor),
                     float(args.c_etc_log_coeff),
                     float(args.p_etc_explore_coef),
+                    arm_sched,
+                    noise_mode,
+                    pull_tb,
+                    ucb_ts,
                 )
                 for r in range(args.runs)
             ]
@@ -431,7 +521,9 @@ def main() -> None:
         f"clip_rewards={int(clip_rewards)}, rectify_regret={int(rectify_regret)}, runs={args.runs}, jobs={jobs}, "
         f"market_model={args.market_model}, record_every={int(args.record_every)}, "
         f"aeags_CF={float(args.aeags_confidence_factor):.4g}, c_etc_log={float(args.c_etc_log_coeff):.4g}, "
-        f"p_etc_explore={float(args.p_etc_explore_coef):.4g}"
+        f"p_etc_explore={float(args.p_etc_explore_coef):.4g}, "
+        f"aeags_arm_schedule={arm_sched}, reward_noise_mode={noise_mode}, "
+        f"aeags_pull_tiebreak={pull_tb}, aeags_ucb_time_scale={ucb_ts}"
     )
 
     summary = _aggregate_results(agg)
@@ -464,6 +556,10 @@ def main() -> None:
                 "aeags_confidence_factor": float(args.aeags_confidence_factor),
                 "c_etc_log_coeff": float(args.c_etc_log_coeff),
                 "p_etc_explore_coef": float(args.p_etc_explore_coef),
+                "aeags_arm_schedule": arm_sched,
+                "reward_noise_mode": noise_mode,
+                "aeags_player_pull_tiebreak": pull_tb,
+                "aeags_ucb_time_scale": ucb_ts,
             },
             "summary": summary,
         }

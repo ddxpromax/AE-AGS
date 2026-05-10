@@ -89,7 +89,8 @@ class CETCKnownDelta:
     Centralized ETC baseline (extended to ties like Liu et al., 2020 + random GS tie breaks):
     - Explore each directed (player, arm) pair roughly m_i times via collision-free rotations
     - Commit to offline player-proposing GS from μ̂ with noise tie-breaking
-    Appendix E reproduction: use moderate m ≈ θ log(T)/Δ²; θ≈2 matches reported curves better than θ≈4.
+    Appendix reproduction: pulls per directed pair are ~ log_coeff * ln(T)/Δ² (see run_experiment --c-etc-log-coeff).
+    Use ~4 for a theorem-scale order (Liu et al. style); ~8.35 in paper_default aligns Appendix Fig.1(f) unstability (~43% unstable rounds at T=100k, N=K=5) and is **not** a published theoretical constant—see README.
     """
 
     def __init__(

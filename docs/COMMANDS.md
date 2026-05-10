@@ -94,6 +94,27 @@ python -m ae_ags.run_experiment --preset paper_default \
   --c-etc-log-coeff 8.35 --p-etc-explore-coef 0.52 --aeags-confidence-factor 6
 ```
 
+Algorithm 2 proposal order (if Fig. 1 unstability ordering looks wrong):
+
+```bash
+python -m ae_ags.run_experiment --preset paper_default --runs 20 --jobs 8 \
+  --aeags-arm-schedule fixed --reward-noise-mode shared
+```
+
+C-ETC coefficient scan (theory-ish vs appendix scale): rerun with `--c-etc-log-coeff 4` or `8.35`.
+
+Appendix E sanity (`jobs` parallelism vs `noise` coupling):
+
+```bash
+./scripts/ablation_noise_jobs.sh
+```
+
+Fig. 1(f) knob grid (fast screen; increase `--T` / `--runs` for paper-scale):
+
+```bash
+python -m ae_ags.scan_fig1_knobs --T 8000 --runs 8 --jobs 4
+```
+
 ## G. Git workflow
 
 ```bash
