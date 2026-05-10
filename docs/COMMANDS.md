@@ -130,6 +130,15 @@ python -m ae_ags.paper_figure1 --input-json results/paper_run/appendix_e_fig1_fu
   --output results/paper_run/plots/figure1_appendix_e_funnel_best_cf5_rs_sm.png
 ```
 
+Six-panel Fig. 1 with **C-ETC regret knee \(\sim 15\)k-ish** (smaller `--c-etc-log-coeff`, same AE funnel knobs) — artifacts under `results/paper_run/fig1_knee15k/`:
+
+```bash
+python -m ae_ags.run_experiment --preset paper_fig1_knee15k --jobs 8 --record-every 1000 \
+  --save-json results/paper_run/fig1_knee15k/one_run_curve.json
+python -m ae_ags.paper_figure1 --input-json results/paper_run/fig1_knee15k/one_run_curve.json \
+  --output results/paper_run/fig1_knee15k/plots/figure1_sixpanels.png
+```
+
 ## G. Git workflow
 
 ```bash

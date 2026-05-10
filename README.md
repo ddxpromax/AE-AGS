@@ -28,12 +28,14 @@ This repo focuses on:
 
 ### Config / scripts
 - `configs/paper_default.json`: default paper-scale config.
+- `configs/paper_fig1_knee15k.json`: Fig. 1 six-panel **visual** preset (C-ETC `log_coeff` smaller so the regret knee is near \(\sim 10^4\)–\(2\times10^4\) rounds, closer to the PDF than `c_etc_log_coeff≈8.35`).
 - `run_paper_default.sh`: one-command paper default run.
 - `run_appendix_e.sh`: one-command Appendix E sweep run.
 - [`scripts/fig1_funnel_scan.sh`](scripts/fig1_funnel_scan.sh): medium-\(T\) Cartesian scan for Fig. 1(f) knobs (writes [`results/paper_run/fig1_funnel_scan_t15000.txt`](results/paper_run/fig1_funnel_scan_t15000.txt)).
 
 ### Outputs
-- `results/paper_run/`: paper default run outputs.
+- `results/paper_run/`: paper default run outputs (older Fig. 1 PNGs also live under `results/paper_run/plots/`).
+- [`results/paper_run/fig1_knee15k/plots/`](results/paper_run/fig1_knee15k/plots/): **preferred** location for the latest six-panel Fig. 1 — run preset **`paper_fig1_knee15k`** (`c_etc_log_coeff=2.5`, AE-AGS funnel knobs) then `paper_figure1` (see [`docs/COMMANDS.md`](docs/COMMANDS.md)).
 - `results/appendix_e_full/`: Appendix E sweep outputs.
 
 **Algorithm 2 `A_i` fix (incumbent tentative match included when comparing proposals):** after this correction, Fig. 1 curves at **`paper_default`** with **theorem-scale** `aeags_confidence_factor=6`, `pick_one`, `pull_tiebreak=random` still show **AE-AGS cumulative unstability \(\approx 5.0\times 10^4\)** vs **C-ETC \(\approx 4.3\times 10^4\)** (`appendix_e_fig1_pick_one.json` / `figure1_appendix_e_pick_one.png`). A **two-stage funnel** on medium \(T\) (see `results/paper_run/fig1_funnel_scan_t15000.txt`) picked **`aeags_confidence_factor=5`**, **`round_sweep`**, **`smallest_arm`**, **`aeags_arm_rank_jitter_scale=0`**: at full **`paper_default`** length this yields **AE-AGS \(\approx 4.22\times 10^4\)** vs **C-ETC \(\approx 4.33\times 10^4\)** (`appendix_e_fig1_funnel_best_cf5_rs_sm.json`, `figure1_appendix_e_funnel_best_cf5_rs_sm.png`). That **\(5\neq 6\)** combination is **empirical Fig. 1 alignment**, not the theorem’s confidence constant. For **theorem \(6\)** with the same outer/tie-break but full \(T\), see `appendix_e_fig1_cf6_round_sweep_smallest_arm.json`. Older JSON from before the `A_i` change should not be cited as current code.

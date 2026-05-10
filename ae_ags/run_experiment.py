@@ -93,6 +93,31 @@ PRESETS = {
         "aeags_algo2_outer_loop": "pick_one",
         "aeags_arm_rank_jitter_scale": 0.0,
     },
+    "paper_fig1_knee15k": {
+        # Appendix Fig.1 six-panel **visual alignment**: shorten C-ETC exploration so the cumulative-regret
+        # “knee” lands near ~15k rounds (paper-scale), instead of ~50k with c_etc_log_coeff≈8.35.
+        # Per-pair pulls m ≈ ceil(c_etc_log_coeff * ln(T+1)/Δ²); heuristic commit horizon ~ K·m exploration rounds.
+        "N": 5,
+        "K": 5,
+        "T": 100000,
+        "delta": 0.1,
+        "sigma": 1.0,
+        "clip_rewards": False,
+        "rectify_regret": False,
+        "seed": 0,
+        "runs": 20,
+        "record_every": 1000,
+        "market_model": "paper_rank",
+        "aeags_confidence_factor": 5.0,
+        "c_etc_log_coeff": 2.5,
+        "p_etc_explore_coef": 0.52,
+        "aeags_arm_schedule": "fixed",
+        "reward_noise_mode": "shared",
+        "aeags_player_pull_tiebreak": "smallest_arm",
+        "aeags_ucb_time_scale": "horizon",
+        "aeags_algo2_outer_loop": "round_sweep",
+        "aeags_arm_rank_jitter_scale": 0.0,
+    },
 }
 
 
