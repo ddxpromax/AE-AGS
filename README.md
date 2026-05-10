@@ -24,19 +24,21 @@ This repo focuses on:
 - `ae_ags/plot_from_run_json.py`: plot curves from `run_experiment.py --save-json` output.
 - `ae_ags/scan_fig1_knobs.py`: grid scan of AE-AGS knobs vs C-ETC unstability (Fig. 1(f) alignment).
 - `ae_ags/test_algorithm2_ai.py`: regression check that Algorithm 2 compares incumbent + newcomer on \(T_{i,j}\) (`python -m ae_ags.test_algorithm2_ai`).
+- `ae_ags/test_aeags_assign_order.py`: Algorithm 3 observe semantics + optional arm-rank jitter tie-break smoke (`python -m ae_ags.test_aeags_assign_order`).
 
 ### Config / scripts
 - `configs/paper_default.json`: default paper-scale config.
 - `run_paper_default.sh`: one-command paper default run.
 - `run_appendix_e.sh`: one-command Appendix E sweep run.
+- [`scripts/fig1_funnel_scan.sh`](scripts/fig1_funnel_scan.sh): medium-\(T\) Cartesian scan for Fig. 1(f) knobs (writes [`results/paper_run/fig1_funnel_scan_t15000.txt`](results/paper_run/fig1_funnel_scan_t15000.txt)).
 
 ### Outputs
 - `results/paper_run/`: paper default run outputs.
 - `results/appendix_e_full/`: Appendix E sweep outputs.
 
-**Algorithm 2 `A_i` fix (incumbent tentative match included when comparing proposals):** after this correction, rerun Fig. 1 curves from `one_run_curve_appendix_e_fixed.json` / `figure1_appendix_e_fixed.png` (commands in plan). With `preset paper_default`, `runs=20`, `seed=0`, `fixed` arm schedule, a representative mean **AE-AGS cumulative market unstability \(\approx 5.0\times 10^4\)** vs **C-ETC \(\approx 4.3\times 10^4\)**—closer than the pre-fix \(\sim 6.0\times 10^4\) plateau. Older JSON (`one_run_curve_appendix_e*.json` from before the `A_i` change) should not be cited as matching current code.
+**Algorithm 2 `A_i` fix (incumbent tentative match included when comparing proposals):** after this correction, Fig. 1 curves at **`paper_default`** with **theorem-scale** `aeags_confidence_factor=6`, `pick_one`, `pull_tiebreak=random` still show **AE-AGS cumulative unstability \(\approx 5.0\times 10^4\)** vs **C-ETC \(\approx 4.3\times 10^4\)** (`appendix_e_fig1_pick_one.json` / `figure1_appendix_e_pick_one.png`). A **two-stage funnel** on medium \(T\) (see `results/paper_run/fig1_funnel_scan_t15000.txt`) picked **`aeags_confidence_factor=5`**, **`round_sweep`**, **`smallest_arm`**, **`aeags_arm_rank_jitter_scale=0`**: at full **`paper_default`** length this yields **AE-AGS \(\approx 4.22\times 10^4\)** vs **C-ETC \(\approx 4.33\times 10^4\)** (`appendix_e_fig1_funnel_best_cf5_rs_sm.json`, `figure1_appendix_e_funnel_best_cf5_rs_sm.png`). That **\(5\neq 6\)** combination is **empirical Fig. 1 alignment**, not the theorem’s confidence constant. For **theorem \(6\)** with the same outer/tie-break but full \(T\), see `appendix_e_fig1_cf6_round_sweep_smallest_arm.json`. Older JSON from before the `A_i` change should not be cited as current code.
 
-Other archived knobs/sweeps: `one_run_curve_appendix_e_round_robin.json`, `one_run_curve_appendix_e_random.json` (~\(6.9\times 10^4\) AE-AGS, avoid for repro), etc., under `results/paper_run/`; prefer **`fixed`** arm scheduling over **`random`**.
+Other archived knobs/sweeps: `one_run_curve_appendix_e_round_robin.json`, `one_run_curve_appendix_e_random.json` (~\(6.9\times 10^4\) AE-AGS, avoid for repro), etc., under `results/paper_run/`; prefer **`fixed`** arm scheduling over **`random`**. Per-seed spread for the funnel-best knobs (short \(T\)): `results/paper_run/fig1_seed_table_funnel_best_t8k.txt`.
 
 ### Reference material
 - `2409_Bandit_Learning_in_Matchi.pdf`
@@ -112,7 +114,7 @@ Practical knobs:
 | **`--record-every 5000`** (or larger) vs `1000` | Fewer trajectory snapshots ⇒ slightly less aggregation / JSON churn; main loop cost barely changes. |
 | Appendix E **`--runs`** | Paper uses 20; lowering (e.g. 10) for dry runs scales linearly but is no longer apples-to-apples with Figure 2. |
 
-Implementation-side (already in code): **`is_stable_matching` reuses cached player inverse ranks**, **`Better` updates are vectorized**, **`log(T)` precomputed**, and **AE-AGS reuses a fixed arm→player propose order** for the whole run instead of sorting `arm_rank` every round.
+Implementation-side (already in code): **`is_stable_matching` reuses cached player inverse ranks**, **`Better` updates are vectorized**, **`log(T)` precomputed**, and **AE-AGS uses a fixed arm→player propose order** from the market when **`--aeags-arm-rank-jitter-scale 0`** (default); a positive scale **re-sorts `arm_rank` with tiny Gaussian jitter each round** (Appendix B–style arm-side tie-break).
 
 ### Appendix Fig. 1 reproduction toggles (`run_experiment`)
 
@@ -120,15 +122,23 @@ Implementation-side (already in code): **`is_stable_matching` reuses cached play
 - **`--reward-noise-mode`**: **`shared`** (default): deterministic Gaussian keyed by `(seed, t, i, a)`, identical across algorithms when two policies realize the same `(t,i,a)`; **`independent`**: separate salt per algorithm for ablations against the appendix wording “drawn independently” (does not change fairness of *relative* rankings unless you rely on coupling).
 - **`--aeags-player-pull-tiebreak`**: when several arms tie on **minimum** pull count in Algorithm 2 line 6, **`random`** (default) breaks ties uniformly; **`smallest_arm`** picks the lowest arm index (deterministic, closer to some reference scripts).
 - **`--aeags-ucb-time-scale`**: **`horizon`** (default) uses \(\ln(T)\) in the UCB/LCB radius as in the paper; **`elapsed`** uses \(\ln(t)\) at the current round—**empirical only**, not the theorem statement.
+- **`--aeags-algo2-outer-loop`**: **`pick_one`** (default): when several unmatched arms could propose in one outer iteration, pick one via **`--aeags-arm-schedule`**. **`round_sweep`**: repeat full sweeps over arm indices \(j=0..K-1\); each unmatched arm takes at most one propose step per sweep (order fixed by index; **`arm_schedule` does not reorder simultaneous eligibles** in this mode).
+- **`--aeags-arm-rank-jitter-scale`**: **`0`** (default) uses the cached deterministic propose order. **`>0`** adds i.i.d. Gaussian noise (scaled by this factor) to integer **`arm_rank`** entries before sorting **each round**—closer in spirit to the offline GS tie-break in [`gs_commit_matching_from_mu_hat`](ae_ags/baselines.py), at the cost of deviating from a fixed proposal list.
 
-Knob scan (same seed, prints `AE_unst`, `CETC_unst`, `AE−CETC`):
+Knob scan (same seed unless `--seed-list` is set; prints `AE_unst`, `CETC_unst`, `AE−CETC`; comma lists for **`--confidence-factors`**, **`--algo2-outer-loops`**, **`--arm-rank-jitter-scales`**; **`--seed-list`** uses the **first** entry of each list for the per-seed table):
 
 ```bash
 python -m ae_ags.scan_fig1_knobs --T 8000 --runs 8 --jobs 4 \
+  --confidence-factors 6 \
+  --algo2-outer-loops pick_one,round_sweep \
   --arm-schedules fixed,random,round_robin \
   --pull-tiebreaks random,smallest_arm \
-  --ucb-time-scales horizon,elapsed
+  --ucb-time-scales horizon \
+  --arm-rank-jitter-scales 0,1e-9 \
+  --seed-list 0,1,2,3,4,5,6,7,8,9
 ```
+
+Omit **`--seed-list`** if you only need the Cartesian grid over the other knobs. Reproduce the recorded funnel grid via **`./scripts/fig1_funnel_scan.sh`**.
 
 Reproducibility: parallel **`--jobs`** only affects wall-clock; aggregates should match **`--jobs 1`** for the same **`--runs`** / **`--seed`**. Sanity script: [`scripts/ablation_noise_jobs.sh`](scripts/ablation_noise_jobs.sh).
 
@@ -150,7 +160,7 @@ To scan coefficients, rerun with different `--c-etc-log-coeff` (each run writes 
 
 - Arms break ties among equally preferred proposers **uniformly at random**, per the paper §3 (`resolve_round`; each algorithm run passes its **own** `rng`), instead of deterministic lowest player index only.
 
-- **Appendix Fig. 1 knobs** (see `configs/paper_default.json`): `aeags_confidence_factor` stays at the theoretical `6` in the AE-AGS radius (with `ln(T)` or `ln(t)` per `aeags_ucb_time_scale`). `c_etc_log_coeff` scales C-ETC pulls per directed pair as `coeff · ln(T)/Δ²` (see table above: **~4** theory-scale vs **~8.35** Fig.1(f) scale). `p_etc_explore_coef` scales phased exploration length. Offline GS commits apply tiny Gaussian perturbations to `μ̂` before player-proposing GS (Appendix B style ties). JSON may set `aeags_arm_schedule`, `reward_noise_mode`, `aeags_player_pull_tiebreak`, `aeags_ucb_time_scale`.
+- **Appendix Fig. 1 knobs** (see `configs/paper_default.json`): the **theorem** AE-AGS radius uses **`aeags_confidence_factor = 6`** with **`ln(T)`** when `aeags_ucb_time_scale=horizon`. For **figures / scans**, [`scan_fig1_knobs.py`](ae_ags/scan_fig1_knobs.py) accepts a **`confidence-factors` list**: values \(\neq 6\) are explicitly **empirical knob search**, not the stated bound constants. **`c_etc_log_coeff`** scales C-ETC pulls per directed pair as `coeff · ln(T)/Δ²` (see table above: **~4** theory-scale vs **~8.35** Fig.1(f) scale). **`p_etc_explore_coef`** scales phased exploration length. Offline GS commits apply tiny Gaussian perturbations to `μ̂` before player-proposing GS (Appendix B style ties). JSON may set `aeags_arm_schedule`, `reward_noise_mode`, `aeags_player_pull_tiebreak`, `aeags_ucb_time_scale`, **`aeags_algo2_outer_loop`**, **`aeags_arm_rank_jitter_scale`**.
 
 - **Stable regret (paper Eq. (1))** uses a per-player *regret reference* (not an algorithm baseline like C-ETC):
   \(\mu_{i,m_i}=\min_{\text{stable }m'}\mu_{i,m'(i)}\), computed in

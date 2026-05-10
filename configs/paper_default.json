@@ -16,5 +16,7 @@
   "aeags_arm_schedule": "fixed",
   "reward_noise_mode": "shared",
   "aeags_player_pull_tiebreak": "random",
-  "aeags_ucb_time_scale": "horizon"
+  "aeags_ucb_time_scale": "horizon",
+  "aeags_algo2_outer_loop": "pick_one",
+  "aeags_arm_rank_jitter_scale": 0.0
 }

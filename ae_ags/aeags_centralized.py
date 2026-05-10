@@ -32,6 +32,8 @@ class AEAGSCentralized:
         arm_schedule: str = "fixed",
         player_pull_tiebreak: str = "random",
         ucb_time_scale: str = "horizon",
+        algo2_outer_loop: str = "pick_one",
+        arm_rank_jitter_scale: float = 0.0,
     ):
         self.N = n_players
         self.K = n_arms
@@ -51,6 +53,14 @@ class AEAGSCentralized:
         if uts not in ("horizon", "elapsed"):
             raise ValueError("ucb_time_scale must be 'horizon' or 'elapsed'.")
         self._ucb_time_scale = uts
+        a2 = str(algo2_outer_loop).lower().replace("-", "_")
+        if a2 not in ("pick_one", "round_sweep"):
+            raise ValueError("algo2_outer_loop must be 'pick_one' or 'round_sweep'.")
+        self._algo2_outer_loop = a2
+        jitter = float(arm_rank_jitter_scale)
+        if jitter < 0.0:
+            raise ValueError("arm_rank_jitter_scale must be non-negative.")
+        self._arm_rank_jitter_scale = jitter
         self.rng = np.random.default_rng(seed)
         self.state = AEAGSState(
             mu_hat=np.zeros((self.N, self.K), dtype=float),
@@ -132,29 +142,15 @@ class AEAGSCentralized:
             pick = tied[int(self.rng.integers(0, len(tied)))]
             return int(valid[int(pick)])
 
-        while True:
-            # ∃ unmatched arm ... Algorithm 2 does not specify which arm moves when several are eligible;
-            # `fixed` / `round_robin` are deterministic schedules; `random` matches the older repo default.
-            candidates_a = [
-                int(j)
-                for j in range(self.K)
-                if arm_match[j] == -1 and s[j] < self.N
-            ]
-            if not candidates_a:
-                break
-            a = pick_proposing_arm(candidates_a)
-
-            # Arm a proposes to its s[a]-th preferred player.
+        def proposal_step(a: int) -> None:
+            """One Algorithm-2 iteration for arm ``a``: propose, build A_i, player choice, reject others."""
             i = int(order[a, s[a]])
             available[i].add(a)
-            # Algorithm 2: A_i accumulates candidates; include current tentative match m_i if any.
             inc = int(player_match[i])
             if inc != -1:
                 available[i].add(inc)
 
-            # Player i chooses among available arms with AE-AGS rule.
             chosen = choose_player_arm(i)
-            # If chosen arm was matched to another player, break that match first
             prev_holder = int(arm_match[chosen])
             if prev_holder != -1 and prev_holder != i:
                 player_match[prev_holder] = -1
@@ -162,22 +158,55 @@ class AEAGSCentralized:
             player_match[i] = chosen
             arm_match[chosen] = i
 
-            # Reject every arm in A_i except the chosen (includes prior m_i when it lost).
             for rej in list(available[i]):
                 if rej == chosen:
                     continue
                 arm_match[rej] = -1
                 s[rej] += 1
             available[i].clear()
+
+        if self._algo2_outer_loop == "round_sweep":
+            # Repeated sweeps arm 0..K-1; each eligible unmatched arm performs at most one step per sweep.
+            # Ignores arm_schedule among simultaneous eligibles (order is forced by index).
+            while True:
+                progressed = False
+                for j in range(self.K):
+                    if arm_match[j] != -1 or s[j] >= self.N:
+                        continue
+                    proposal_step(j)
+                    progressed = True
+                if not progressed:
+                    break
+        else:
+            while True:
+                candidates_a = [
+                    int(j)
+                    for j in range(self.K)
+                    if arm_match[j] == -1 and s[j] < self.N
+                ]
+                if not candidates_a:
+                    break
+                a = pick_proposing_arm(candidates_a)
+                proposal_step(a)
+
         return player_match
 
     def assign_actions(self, arm_rank: np.ndarray) -> np.ndarray:
         self._round += 1
-        if self._arm_propose_order is None:
-            self._arm_propose_order = np.argsort(arm_rank, axis=1, kind="stable").astype(np.int32, copy=False)
+        # Appendix B-style random tie-breaking on arm-side indifferences: perturb integer ranks before sorting.
+        if self._arm_rank_jitter_scale > 0.0:
+            pert = arm_rank.astype(np.float64, copy=False)
+            pert += self._arm_rank_jitter_scale * self.rng.normal(size=arm_rank.shape)
+            propose_order = np.argsort(pert, axis=1, kind="stable").astype(np.int32, copy=False)
+        else:
+            if self._arm_propose_order is None:
+                self._arm_propose_order = np.argsort(arm_rank, axis=1, kind="stable").astype(
+                    np.int32, copy=False
+                )
+            propose_order = self._arm_propose_order
         ucb, lcb = self._compute_confidence_bounds()
         self._update_better(ucb, lcb)
-        return self._subroutine_matching(self._arm_propose_order)
+        return self._subroutine_matching(propose_order)
 
     def observe(self, assigned_arm: np.ndarray, matched_arm: np.ndarray, rewards: np.ndarray) -> None:
         # Algorithm 3: update only if p_i is successfully matched to the assigned A_i(t).

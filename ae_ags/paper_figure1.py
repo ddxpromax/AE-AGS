@@ -232,6 +232,8 @@ def plot_paper_figure1(
     rnm = str(cfg.get("reward_noise_mode", "shared")).lower()
     apt = cfg.get("aeags_player_pull_tiebreak", "?")
     ucb_ts = cfg.get("aeags_ucb_time_scale", "?")
+    a2 = cfg.get("aeags_algo2_outer_loop", "pick_one")
+    jr = cfg.get("aeags_arm_rank_jitter_scale", 0.0)
     footer = (
         f"Appendix E setup: N=K={cfg.get('N', '?')}, delta={cfg.get('delta', '?')}, "
         f"sigma={cfg.get('sigma', '?')}, T={cfg.get('T', '?')}, runs={cfg.get('runs', '?')}, "
@@ -247,7 +249,8 @@ def plot_paper_figure1(
         footer += (
             f" Repro knobs: aeags_rad_factor={ae_c} sqrt(factor·{ucb_note}/T_ij); "
             f"c_etc_log_coeff={cet}; p_etc_explore_coef={pet}; "
-            f"AE-AGS arm_schedule={arm_s}; pull_tiebreak={apt}; reward noise: {noise_note}"
+            f"AE-AGS arm_schedule={arm_s}; algo2_outer={a2}; arm_rank_jitter={jr}; "
+            f"pull_tiebreak={apt}; reward noise: {noise_note}"
         )
     fig.text(0.5, 0.025, footer, ha="center", va="bottom", fontsize=6.5, transform=fig.transFigure)
 

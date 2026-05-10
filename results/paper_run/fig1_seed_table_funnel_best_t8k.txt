@@ -1,0 +1,16 @@
+# scan N=5 K=5 T=8000 runs=8 seed=0 jobs=4 market=paper_rank c_etc=8.35
+cf	outer	jitter	schedule	pull_tb	ucb_ts	AE_unst	CETC_unst	AE-CETC
+5.0	round_sweep	0.0	fixed	smallest_arm	horizon	6268.1	7200.0	-931.9
+
+# seed sensitivity: sched=fixed pull_tb=smallest_arm ucb=horizon cf=5.0 outer=round_sweep arm_rank_jitter=0.0 (first list entries)
+seed	AE_unst	CETC_unst	AE-CETC
+0	6268.1	7200.0	-931.9
+1	5699.5	7400.0	-1700.5
+2	5315.8	7400.0	-2084.2
+3	5550.9	7200.0	-1649.1
+4	4181.4	6800.0	-2618.6
+5	5252.2	7800.0	-2547.8
+6	5164.4	7800.0	-2635.6
+7	6096.6	7200.0	-1103.4
+8	5855.6	7600.0	-1744.4
+9	5240.1	7000.0	-1759.9

@@ -43,6 +43,8 @@ PRESETS = {
         "reward_noise_mode": "shared",
         "aeags_player_pull_tiebreak": "random",
         "aeags_ucb_time_scale": "horizon",
+        "aeags_algo2_outer_loop": "pick_one",
+        "aeags_arm_rank_jitter_scale": 0.0,
     },
     "paper_default": {
         "N": 5,
@@ -66,6 +68,8 @@ PRESETS = {
         "reward_noise_mode": "shared",
         "aeags_player_pull_tiebreak": "random",
         "aeags_ucb_time_scale": "horizon",
+        "aeags_algo2_outer_loop": "pick_one",
+        "aeags_arm_rank_jitter_scale": 0.0,
     },
     "paper_clean": {
         "N": 5,
@@ -86,6 +90,8 @@ PRESETS = {
         "reward_noise_mode": "shared",
         "aeags_player_pull_tiebreak": "random",
         "aeags_ucb_time_scale": "horizon",
+        "aeags_algo2_outer_loop": "pick_one",
+        "aeags_arm_rank_jitter_scale": 0.0,
     },
 }
 
@@ -132,6 +138,8 @@ def _resolve_args(args: argparse.Namespace) -> argparse.Namespace:
         "reward_noise_mode": "shared",
         "aeags_player_pull_tiebreak": "random",
         "aeags_ucb_time_scale": "horizon",
+        "aeags_algo2_outer_loop": "pick_one",
+        "aeags_arm_rank_jitter_scale": 0.0,
     }
     preset_vals = PRESETS.get(args.preset, {})
     cfg_vals = _load_json_config(args.config)
@@ -275,11 +283,16 @@ def run_one_repeat(
     reward_noise_mode: str = "shared",
     aeags_player_pull_tiebreak: str = "random",
     aeags_ucb_time_scale: str = "horizon",
+    aeags_algo2_outer_loop: str = "pick_one",
+    aeags_arm_rank_jitter_scale: float = 0.0,
 ) -> Dict[str, RunResult]:
     aeags_arm_schedule = str(aeags_arm_schedule).lower().replace("-", "_")
     reward_noise_mode = str(reward_noise_mode).lower()
     aeags_player_pull_tiebreak = str(aeags_player_pull_tiebreak).lower().replace("-", "_")
     aeags_ucb_time_scale = str(aeags_ucb_time_scale).lower().replace("-", "_")
+    aeags_algo2_outer_loop = str(aeags_algo2_outer_loop).lower().replace("-", "_")
+    if aeags_algo2_outer_loop not in ("pick_one", "round_sweep"):
+        raise ValueError(f"aeags_algo2_outer_loop must be pick_one or round_sweep, got {aeags_algo2_outer_loop!r}")
     market = make_random_market(
         n_players,
         n_arms,
@@ -304,6 +317,8 @@ def run_one_repeat(
         arm_schedule=str(aeags_arm_schedule),
         player_pull_tiebreak=str(aeags_player_pull_tiebreak),
         ucb_time_scale=str(aeags_ucb_time_scale),
+        algo2_outer_loop=str(aeags_algo2_outer_loop),
+        arm_rank_jitter_scale=float(aeags_arm_rank_jitter_scale),
     )
     c_etc = CETCKnownDelta(
         n_players,
@@ -448,6 +463,28 @@ def main() -> None:
             "(empirical only, not the stated theory bound)."
         ),
     )
+    parser.add_argument(
+        "--aeags-algo2-outer-loop",
+        type=str,
+        choices=["pick_one", "round_sweep", "pick-one", "round-sweep"],
+        default=None,
+        help=(
+            "Algorithm 2 outer dispatcher: "
+            "`pick_one` selects one proposing arm via --aeags-arm-schedule when multiple are eligible "
+            "(paper-style nondeterministic choice point). "
+            "`round_sweep` runs successive sweeps j=0..K-1, each unmatched arm proposes at most once per sweep "
+            "(order fixed by index; arm_schedule applies only inside pick_one)."
+        ),
+    )
+    parser.add_argument(
+        "--aeags-arm-rank-jitter-scale",
+        type=float,
+        default=None,
+        help=(
+            "Appendix B-style tie-break for arm-side preferences: each round, sort arm_rank plus "
+            "N(0,scale^2) before building propose lists. 0 (default) uses fixed cached order from the market."
+        ),
+    )
     args = _resolve_args(parser.parse_args())
 
     alg_names = ["AE-AGS", "C-ETC", "P-ETC", "Random"]
@@ -459,6 +496,8 @@ def main() -> None:
     noise_mode = str(args.reward_noise_mode).lower()
     pull_tb = str(args.aeags_player_pull_tiebreak).lower().replace("-", "_")
     ucb_ts = str(args.aeags_ucb_time_scale).lower().replace("-", "_")
+    a2_outer = str(args.aeags_algo2_outer_loop).lower().replace("-", "_")
+    arm_jitter = float(args.aeags_arm_rank_jitter_scale)
 
     if jobs == 1:
         for r in range(args.runs):
@@ -481,6 +520,8 @@ def main() -> None:
                 noise_mode,
                 pull_tb,
                 ucb_ts,
+                a2_outer,
+                arm_jitter,
             )
             for name in alg_names:
                 agg[name].append(one[name])
@@ -508,6 +549,8 @@ def main() -> None:
                     noise_mode,
                     pull_tb,
                     ucb_ts,
+                    a2_outer,
+                    arm_jitter,
                 )
                 for r in range(args.runs)
             ]
@@ -523,7 +566,8 @@ def main() -> None:
         f"aeags_CF={float(args.aeags_confidence_factor):.4g}, c_etc_log={float(args.c_etc_log_coeff):.4g}, "
         f"p_etc_explore={float(args.p_etc_explore_coef):.4g}, "
         f"aeags_arm_schedule={arm_sched}, reward_noise_mode={noise_mode}, "
-        f"aeags_pull_tiebreak={pull_tb}, aeags_ucb_time_scale={ucb_ts}"
+        f"aeags_pull_tiebreak={pull_tb}, aeags_ucb_time_scale={ucb_ts}, "
+        f"aeags_algo2_outer_loop={a2_outer}, aeags_arm_rank_jitter_scale={arm_jitter}"
     )
 
     summary = _aggregate_results(agg)
@@ -560,6 +604,8 @@ def main() -> None:
                 "reward_noise_mode": noise_mode,
                 "aeags_player_pull_tiebreak": pull_tb,
                 "aeags_ucb_time_scale": ucb_ts,
+                "aeags_algo2_outer_loop": a2_outer,
+                "aeags_arm_rank_jitter_scale": arm_jitter,
             },
             "summary": summary,
         }

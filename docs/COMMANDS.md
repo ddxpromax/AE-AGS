@@ -109,10 +109,25 @@ Appendix E sanity (`jobs` parallelism vs `noise` coupling):
 ./scripts/ablation_noise_jobs.sh
 ```
 
-Fig. 1(f) knob grid (fast screen; increase `--T` / `--runs` for paper-scale):
+Fig. 1(f) knob grid (fast screen; add `--confidence-factors 5,5.5,6`, `--algo2-outer-loops pick_one,round_sweep`, optional `--seed-list 0,...,9`; increase `--T` / `--runs` for paper-scale):
 
 ```bash
-python -m ae_ags.scan_fig1_knobs --T 8000 --runs 8 --jobs 4
+python -m ae_ags.scan_fig1_knobs --T 8000 --runs 8 --jobs 4 \
+  --confidence-factors 6 --algo2-outer-loops pick_one,round_sweep
+
+# Full funnel (medium T) → results/paper_run/fig1_funnel_scan_t15000.txt
+./scripts/fig1_funnel_scan.sh
+```
+
+Paper Fig. 1 JSON + six panels after funnel (example: empirical combo that beat C‑ETC on unstability at `seed=0`, `runs=20`):
+
+```bash
+python -m ae_ags.run_experiment --preset paper_default --jobs 8 --record-every 1000 \
+  --aeags-confidence-factor 5 --aeags-algo2-outer-loop round_sweep \
+  --aeags-player-pull-tiebreak smallest_arm --aeags-arm-rank-jitter-scale 0 \
+  --save-json results/paper_run/appendix_e_fig1_funnel_best_cf5_rs_sm.json
+python -m ae_ags.paper_figure1 --input-json results/paper_run/appendix_e_fig1_funnel_best_cf5_rs_sm.json \
+  --output results/paper_run/plots/figure1_appendix_e_funnel_best_cf5_rs_sm.png
 ```
 
 ## G. Git workflow
