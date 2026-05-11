@@ -178,27 +178,42 @@ class MatchingMarket:
         exact_cutoff: int = 8,
         approx_samples: int = 256,
         rng: Optional[np.random.Generator] = None,
+        reference: str = "worst",
     ) -> np.ndarray:
         """
-        Reference vector for stable regret (paper Eq. (1)), not related to baseline *algorithms*.
+        Per-player payoff used as the regret benchmark (not a baseline algorithm).
 
-        For each player i: μ_{i,m_i} = min_{m' stable} μ_{i,m'(i)}.
+        ``reference="worst"`` (paper Eq. (1)): for each player i,
+        μ_{i,m_i} = min_{m' stable} μ_{i,m'(i)} — worst stable payoff.
+
+        ``reference="best"`` (non-paper ablation): max_{m' stable} μ_{i,m'(i)} — best stable payoff.
+
         Exact over all stable matchings when N ≤ exact_cutoff; otherwise approximate via
         random player-proposing GS draws.
         """
+        ref = str(reference).lower().strip()
+        if ref not in ("worst", "best"):
+            raise ValueError(f'reference must be "worst" or "best", got {reference!r}')
+
         N, K = self.mu.shape
         rng = np.random.default_rng() if rng is None else rng
         idx = np.arange(N, dtype=int)
-        fallback = np.min(self.mu, axis=1).astype(float)
 
-        per = np.full(N, np.inf, dtype=float)
+        if ref == "worst":
+            per = np.full(N, np.inf, dtype=float)
+            fallback = np.min(self.mu, axis=1).astype(float)
+            combine = np.minimum
+        else:
+            per = np.full(N, -np.inf, dtype=float)
+            fallback = np.max(self.mu, axis=1).astype(float)
+            combine = np.maximum
 
         if N <= exact_cutoff:
             for perm in itertools.permutations(range(K), N):
                 m = np.array(perm, dtype=int)
                 if self.is_stable_matching(m):
                     vals = self.mu[idx, m].astype(float)
-                    per = np.minimum(per, vals)
+                    per = combine(per, vals)
             if np.all(np.isfinite(per)):
                 return per
         else:
@@ -206,7 +221,7 @@ class MatchingMarket:
                 m = self._sampled_player_gs(rng)
                 if self.is_stable_matching(m):
                     vals = self.mu[idx, m].astype(float)
-                    per = np.minimum(per, vals)
+                    per = combine(per, vals)
             if np.all(np.isfinite(per)):
                 return per
 

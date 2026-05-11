@@ -35,7 +35,7 @@ This repo focuses on:
 
 ### Outputs
 - `results/paper_run/`: paper default run outputs (older Fig. 1 PNGs also live under `results/paper_run/plots/`).
-- [`results/paper_run/fig1_knee15k/plots/`](results/paper_run/fig1_knee15k/plots/): **default** location for Appendix Fig. 1 six-panels: raw regret from `run_paper_default.sh` / `make paper-json` → `one_run_curve.json` + `figure1_sixpanels.png` (via `paper_figure1` or `make paper-figure1`); **nonnegative-regret** (`paper_fig1_knee15k_rectified`) → `one_run_curve_rectified.json` + **`figure1_sixpanels_rectified.png`** (`make paper-json-rectified` then `make paper-figure1-rectified`). See [`docs/COMMANDS.md`](docs/COMMANDS.md).
+- [`results/paper_run/fig1_knee15k/plots/`](results/paper_run/fig1_knee15k/plots/): **default** location for Appendix Fig. 1 six-panels: **paper-style signed regret** (`stable_regret_reference=worst`, `rectify_regret=0`) from `run_paper_default.sh` / `make paper-json` → `one_run_curve.json` + `figure1_sixpanels.png`; **rectified display** → `one_run_curve_rectified.json` + `figure1_sixpanels_rectified.png` (`make paper-json-rectified` / `make paper-figure1-rectified`); **best-stable benchmark ablation** → `one_run_curve_best_stable_ref.json` + `figure1_sixpanels_best_stable_ref.png` (`make paper-json-bestref` / `make paper-figure1-bestref`). See [`docs/COMMANDS.md`](docs/COMMANDS.md).
 - `results/appendix_e_full/`: Appendix E sweep outputs.
 
 **Algorithm 2 `A_i` fix (incumbent tentative match included when comparing proposals):** after this correction, Fig. 1 curves at **`paper_default`** with **theorem-scale** `aeags_confidence_factor=6`, `pick_one`, `pull_tiebreak=random` still show **AE-AGS cumulative unstability \(\approx 5.0\times 10^4\)** vs **C-ETC \(\approx 4.3\times 10^4\)** (`appendix_e_fig1_pick_one.json` / `figure1_appendix_e_pick_one.png`). A **two-stage funnel** on medium \(T\) (see `results/paper_run/fig1_funnel_scan_t15000.txt`) picked **`aeags_confidence_factor=5`**, **`round_sweep`**, **`smallest_arm`**, **`aeags_arm_rank_jitter_scale=0`**: at full **`paper_default`** length this yields **AE-AGS \(\approx 4.22\times 10^4\)** vs **C-ETC \(\approx 4.33\times 10^4\)** (`appendix_e_fig1_funnel_best_cf5_rs_sm.json`, `figure1_appendix_e_funnel_best_cf5_rs_sm.png`). That **\(5\neq 6\)** combination is **empirical Fig. 1 alignment**, not the theorem’s confidence constant. For **theorem \(6\)** with the same outer/tie-break but full \(T\), see `appendix_e_fig1_cf6_round_sweep_smallest_arm.json`. Older JSON from before the `A_i` change should not be cited as current code.
@@ -180,6 +180,10 @@ To scan coefficients, rerun with different `--c-etc-log-coeff` (each run writes 
   (see the extracted axis ranges in the appendix) and does **not**, by itself, mean the run is invalid.
   Use `--rectify-regret 1` for a nonnegative per-round “gap” view. Preset **`paper_clean`** also enables **`clip_rewards`** (stronger deviation from raw sampling). For Appendix Fig. 1–style curves with the **same** hyperparameters as `paper_default` or `paper_fig1_knee15k` but **only** nonnegative cumulative regret in panels (a)–(e), use **`paper_default_rectified`** / **`paper_fig1_knee15k_rectified`**, or `--config configs/paper_default_rectified.json` (equivalently `--rectify-regret 1` on top of those presets).
 
+- **Canonical paper-style runs** keep **`rectify_regret=0`** and **`stable_regret_reference=worst`** (default): cumulative regret follows the signed sum in Eq. (1) without discarding negative per-step contributions.
+
+- **Ablation — best stable benchmark** (not in the paper’s regret definition): `stable_regret_reference=best` uses \(\max_{\text{stable }m'}\mu_{i,m'(i)}\) per player. Preset **`paper_fig1_knee15k_best_stable_ref`**, config [`configs/paper_fig1_knee15k_best_stable_ref.json`](configs/paper_fig1_knee15k_best_stable_ref.json), or CLI **`--stable-regret-reference best`**. Use only to test whether Appendix Fig. 1 (a)–(e) shapes line up better; do not conflate with theorem statements.
+
 - **Reward noise (`--reward-noise-mode`).** Default **`shared`**: within one repeat, all algorithms share the same \(\mu\) matrix; matched rewards use a deterministic stream keyed by `(experiment_seed, t, i, a)` **plus** optional per-policy salt (`independent`). Two policies that realize the same `(t,i,a)` see the **same** draw iff `shared`; `independent` breaks cross-algorithm coupling for ablations. `resolve_round` tie-breaking still uses **each policy’s** RNG.
 
 - AE-AGS empirical means \(T_{i,j}\) update only when the player was **actually matched**
@@ -207,7 +211,7 @@ python -m ae_ags.run_experiment --preset paper_clean
 
 - `docs/PROJECT_MAP.md`: architecture and file responsibilities.
 - `docs/COMMANDS.md`: copy-paste command handbook.
-- `Makefile`: short aliases (`make quick`, `make paper-j8`, `make paper-json-rectified`, `make sweep`).
+- `Makefile`: short aliases (`make quick`, `make paper-j8`, `make paper-json-rectified`, `make paper-json-bestref`, `make sweep`).
 
 ---
 

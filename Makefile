@@ -1,4 +1,4 @@
-.PHONY: quick paper paper-j8 paper-json paper-plot paper-figure1 paper-json-rectified paper-figure1-rectified sweep status
+.PHONY: quick paper paper-j8 paper-json paper-plot paper-figure1 paper-json-rectified paper-figure1-rectified paper-json-bestref paper-figure1-bestref sweep status
 
 # Exported as env for subprocesses; same defaults as scripts/parallel_defaults.sh. Override example:
 #   make paper-json PARALLEL_BLAS="OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4"
@@ -30,6 +30,14 @@ paper-json-rectified:
 
 paper-figure1-rectified:
 	python -m ae_ags.paper_figure1 --input-json results/paper_run/fig1_knee15k/one_run_curve_rectified.json --output results/paper_run/fig1_knee15k/plots/figure1_sixpanels_rectified.png
+
+# Best-stable regret benchmark (non-paper); same knobs as knee15k, raw signed regret.
+paper-json-bestref:
+	mkdir -p results/paper_run/fig1_knee15k/plots
+	$(PARALLEL_BLAS) python -m ae_ags.run_experiment --preset paper_fig1_knee15k_best_stable_ref --config configs/paper_fig1_knee15k_best_stable_ref.json --runs 20 --jobs 8 --record-every 1000 --save-json results/paper_run/fig1_knee15k/one_run_curve_best_stable_ref.json
+
+paper-figure1-bestref:
+	python -m ae_ags.paper_figure1 --input-json results/paper_run/fig1_knee15k/one_run_curve_best_stable_ref.json --output results/paper_run/fig1_knee15k/plots/figure1_sixpanels_best_stable_ref.png
 
 sweep:
 	./run_appendix_e.sh

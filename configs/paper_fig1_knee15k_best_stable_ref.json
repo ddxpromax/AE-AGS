@@ -1,0 +1,23 @@
+{
+  "N": 5,
+  "K": 5,
+  "T": 100000,
+  "delta": 0.1,
+  "sigma": 1.0,
+  "clip_rewards": false,
+  "rectify_regret": false,
+  "stable_regret_reference": "best",
+  "seed": 0,
+  "runs": 20,
+  "record_every": 1000,
+  "market_model": "paper_rank",
+  "aeags_confidence_factor": 5.0,
+  "c_etc_log_coeff": 2.5,
+  "p_etc_explore_coef": 0.52,
+  "aeags_arm_schedule": "fixed",
+  "reward_noise_mode": "shared",
+  "aeags_player_pull_tiebreak": "smallest_arm",
+  "aeags_ucb_time_scale": "horizon",
+  "aeags_algo2_outer_loop": "round_sweep",
+  "aeags_arm_rank_jitter_scale": 0.0
+}

@@ -252,6 +252,11 @@ def plot_paper_figure1(
             f"AE-AGS arm_schedule={arm_s}; algo2_outer={a2}; arm_rank_jitter={jr}; "
             f"pull_tiebreak={apt}; reward noise: {noise_note}"
         )
+    sref = str(cfg.get("stable_regret_reference", "worst")).lower()
+    if sref != "worst":
+        footer += f" Regret benchmark: {sref} stable (paper Eq. (1) uses worst stable)."
+    if int(cfg.get("rectify_regret", 0)):
+        footer += " rectify_regret=1 (non-paper display)."
     fig.text(0.5, 0.025, footer, ha="center", va="bottom", fontsize=6.5, transform=fig.transFigure)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)

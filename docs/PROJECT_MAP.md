@@ -33,7 +33,7 @@ This document explains how the repository is organized and where to edit when ex
     - proposal/rejection flow
     - reward generation (Gaussian noise)
     - weak stability checking
-    - per-player regret reference `stable_regret_reference_per_player` (paper Eq. (1)); distinct from baseline *algorithms* (C-ETC, P-ETC, etc.)
+    - per-player regret reference `stable_regret_reference_per_player` (paper Eq. (1) uses **worst** stable; optional **`best`** stable ablation); distinct from baseline *algorithms* (C-ETC, P-ETC, etc.)
   - Market generation modes:
     - `paper_rank` (default)
     - `level_uniform` (legacy)

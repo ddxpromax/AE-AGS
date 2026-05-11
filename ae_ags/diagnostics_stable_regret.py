@@ -26,6 +26,13 @@ def main() -> None:
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--runs", type=int, default=1, help="How many market draws (run_index) to print.")
     p.add_argument("--rectify-regret", action="store_true")
+    p.add_argument(
+        "--stable-regret-reference",
+        type=str,
+        choices=["worst", "best"],
+        default="worst",
+        help='Benchmark: "worst" = paper Eq. (1); "best" = max stable payoff (ablation).',
+    )
     args = p.parse_args()
 
     for run_index in range(int(args.runs)):
@@ -39,10 +46,12 @@ def main() -> None:
             seed=int(args.seed) + 1000 * run_index,
         )
         rng_ref = np.random.default_rng(int(args.seed) + 424242 + run_index)
-        ref = market.stable_regret_reference_per_player(rng=rng_ref)
+        ref = market.stable_regret_reference_per_player(
+            rng=rng_ref, reference=str(args.stable_regret_reference).lower()
+        )
         print(f"\n=== run_index={run_index} market seed={int(args.seed) + 1000 * run_index} ===")
         print("mu row min / max:", float(market.mu.min()), float(market.mu.max()))
-        print("stable_regret_reference_per_player (worst stable μ per player):", ref)
+        print(f"stable_regret_reference_per_player ({args.stable_regret_reference} stable μ per player):", ref)
 
         policy = AEAGSCentralized(
             args.N,

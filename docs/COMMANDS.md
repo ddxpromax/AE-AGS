@@ -162,6 +162,15 @@ python -m ae_ags.paper_figure1 --input-json results/paper_run/plots/figure1_pape
   --output results/paper_run/plots/figure1_paper_default_rectified.png
 ```
 
+**Best stable regret benchmark** (non-paper; signed regret, no `rectify_regret`). Same knee15k hyperparameters; JSON/PNG under `fig1_knee15k/`:
+
+```bash
+make paper-json-bestref
+make paper-figure1-bestref
+# -> results/paper_run/fig1_knee15k/one_run_curve_best_stable_ref.json
+# -> results/paper_run/fig1_knee15k/plots/figure1_sixpanels_best_stable_ref.png
+```
+
 ## G. Git workflow
 
 ```bash

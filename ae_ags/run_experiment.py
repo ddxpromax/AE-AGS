@@ -165,6 +165,31 @@ PRESETS = {
         "aeags_algo2_outer_loop": "round_sweep",
         "aeags_arm_rank_jitter_scale": 0.0,
     },
+    # Same hyperparameters as paper_fig1_knee15k, but regret benchmark uses best stable payoff per player
+    # (max over stable matchings) — non-paper ablation for figure-shape experiments only.
+    "paper_fig1_knee15k_best_stable_ref": {
+        "N": 5,
+        "K": 5,
+        "T": 100000,
+        "delta": 0.1,
+        "sigma": 1.0,
+        "clip_rewards": False,
+        "rectify_regret": False,
+        "stable_regret_reference": "best",
+        "seed": 0,
+        "runs": 20,
+        "record_every": 1000,
+        "market_model": "paper_rank",
+        "aeags_confidence_factor": 5.0,
+        "c_etc_log_coeff": 2.5,
+        "p_etc_explore_coef": 0.52,
+        "aeags_arm_schedule": "fixed",
+        "reward_noise_mode": "shared",
+        "aeags_player_pull_tiebreak": "smallest_arm",
+        "aeags_ucb_time_scale": "horizon",
+        "aeags_algo2_outer_loop": "round_sweep",
+        "aeags_arm_rank_jitter_scale": 0.0,
+    },
 }
 
 
@@ -212,6 +237,7 @@ def _resolve_args(args: argparse.Namespace) -> argparse.Namespace:
         "aeags_ucb_time_scale": "horizon",
         "aeags_algo2_outer_loop": "pick_one",
         "aeags_arm_rank_jitter_scale": 0.0,
+        "stable_regret_reference": "worst",
     }
     preset_vals = PRESETS.get(args.preset, {})
     cfg_vals = _load_json_config(args.config)
@@ -357,6 +383,7 @@ def run_one_repeat(
     aeags_ucb_time_scale: str = "horizon",
     aeags_algo2_outer_loop: str = "pick_one",
     aeags_arm_rank_jitter_scale: float = 0.0,
+    stable_regret_reference: str = "worst",
 ) -> Dict[str, RunResult]:
     aeags_arm_schedule = str(aeags_arm_schedule).lower().replace("-", "_")
     reward_noise_mode = str(reward_noise_mode).lower()
@@ -365,6 +392,9 @@ def run_one_repeat(
     aeags_algo2_outer_loop = str(aeags_algo2_outer_loop).lower().replace("-", "_")
     if aeags_algo2_outer_loop not in ("pick_one", "round_sweep"):
         raise ValueError(f"aeags_algo2_outer_loop must be pick_one or round_sweep, got {aeags_algo2_outer_loop!r}")
+    srr = str(stable_regret_reference).lower().strip()
+    if srr not in ("worst", "best"):
+        raise ValueError(f'stable_regret_reference must be "worst" or "best", got {stable_regret_reference!r}')
     market = make_random_market(
         n_players,
         n_arms,
@@ -375,7 +405,7 @@ def run_one_repeat(
         seed=seed + 1000 * run_index,
     )
     regret_ref_rng = np.random.default_rng(seed + 424242 + run_index)
-    regret_reference_mu = market.stable_regret_reference_per_player(rng=regret_ref_rng)
+    regret_reference_mu = market.stable_regret_reference_per_player(rng=regret_ref_rng, reference=srr)
     # Same (t, player, arm) rewards across algorithms on this market instance (policy rng still differs).
     reward_noise_seed = int(seed) + 1_001_311 * int(run_index)
 
@@ -465,6 +495,14 @@ def main() -> None:
     parser.add_argument("--sigma", type=float, default=None, help="Gaussian noise std.")
     parser.add_argument("--clip-rewards", type=int, choices=[0, 1], default=None)
     parser.add_argument("--rectify-regret", type=int, choices=[0, 1], default=None)
+    parser.add_argument(
+        "--stable-regret-reference",
+        type=str,
+        choices=["worst", "best"],
+        default=None,
+        help='Regret benchmark per player: "worst" = min over stable matchings (paper Eq. (1)); '
+        '"best" = max over stable matchings (non-paper ablation for figure experiments).',
+    )
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--runs", type=int, default=None)
     parser.add_argument("--jobs", type=int, default=None, help="Parallel worker processes for runs.")
@@ -564,6 +602,7 @@ def main() -> None:
     jobs = max(1, int(args.jobs))
     clip_rewards = bool(int(args.clip_rewards))
     rectify_regret = bool(int(args.rectify_regret))
+    stable_ref = str(args.stable_regret_reference).lower().strip()
     arm_sched = str(args.aeags_arm_schedule).lower().replace("-", "_")
     noise_mode = str(args.reward_noise_mode).lower()
     pull_tb = str(args.aeags_player_pull_tiebreak).lower().replace("-", "_")
@@ -594,6 +633,7 @@ def main() -> None:
                 ucb_ts,
                 a2_outer,
                 arm_jitter,
+                stable_ref,
             )
             for name in alg_names:
                 agg[name].append(one[name])
@@ -623,6 +663,7 @@ def main() -> None:
                     ucb_ts,
                     a2_outer,
                     arm_jitter,
+                    stable_ref,
                 )
                 for r in range(args.runs)
             ]
@@ -633,7 +674,8 @@ def main() -> None:
 
     print(
         f"Experiment: N={args.N}, K={args.K}, T={args.T}, delta={args.delta}, sigma={args.sigma}, "
-        f"clip_rewards={int(clip_rewards)}, rectify_regret={int(rectify_regret)}, runs={args.runs}, jobs={jobs}, "
+        f"clip_rewards={int(clip_rewards)}, rectify_regret={int(rectify_regret)}, "
+        f"stable_regret_reference={stable_ref}, runs={args.runs}, jobs={jobs}, "
         f"market_model={args.market_model}, record_every={int(args.record_every)}, "
         f"aeags_CF={float(args.aeags_confidence_factor):.4g}, c_etc_log={float(args.c_etc_log_coeff):.4g}, "
         f"p_etc_explore={float(args.p_etc_explore_coef):.4g}, "
@@ -678,6 +720,7 @@ def main() -> None:
                 "aeags_ucb_time_scale": ucb_ts,
                 "aeags_algo2_outer_loop": a2_outer,
                 "aeags_arm_rank_jitter_scale": arm_jitter,
+                "stable_regret_reference": stable_ref,
             },
             "summary": summary,
         }

@@ -32,6 +32,8 @@ This is **not** identical to the strict paper Eq. (1) sum; it is a reproducibili
 
 **Canonical paths (knee15k, rectified):** `results/paper_run/fig1_knee15k/one_run_curve_rectified.json` and `results/paper_run/fig1_knee15k/plots/figure1_sixpanels_rectified.png` — use `make paper-json-rectified` and `make paper-figure1-rectified`.
 
+**Best-stable regret ablation (same folder):** `one_run_curve_best_stable_ref.json`, `figure1_sixpanels_best_stable_ref.png` — `make paper-json-bestref` / `make paper-figure1-bestref`. Paper Eq. (1) remains **worst** stable + **no** rectify; this is for exploratory figure fit only.
+
 **Verify locally:**
 
 ```bash
