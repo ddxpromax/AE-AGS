@@ -1,0 +1,47 @@
+{
+  "source_config": {
+    "stable_regret_reference": "worst",
+    "c_etc_log_coeff": 2.5,
+    "aeags_confidence_factor": 5.0,
+    "aeags_algo2_outer_loop": "round_sweep",
+    "aeags_player_pull_tiebreak": "smallest_arm",
+    "reward_noise_mode": "shared",
+    "T": 100000,
+    "runs": 20
+  },
+  "note": "Panels (a)\u2013(e) use stable_regret_reference; best vs worst changes regret only, not panel (f).",
+  "algorithms": [
+    {
+      "algorithm": "AE-AGS",
+      "cumulative_market_unstability_mean": 42158.75,
+      "curve_unstability_mean_at_last_record": 42158.75,
+      "mean_cumulative_stable_regret": -3706.7636882783095,
+      "max_cumulative_stable_regret": -2480.8372146096035
+    },
+    {
+      "algorithm": "C-ETC",
+      "cumulative_market_unstability_mean": 12955.5,
+      "curve_unstability_mean_at_last_record": 12955.5,
+      "mean_cumulative_stable_regret": -6763.418490940787,
+      "max_cumulative_stable_regret": -4933.653925539213
+    },
+    {
+      "algorithm": "P-ETC",
+      "cumulative_market_unstability_mean": 89885.6,
+      "curve_unstability_mean_at_last_record": 89885.6,
+      "mean_cumulative_stable_regret": -762.429159101777,
+      "max_cumulative_stable_regret": 1406.8162703571702
+    },
+    {
+      "algorithm": "Random",
+      "cumulative_market_unstability_mean": 93009.55,
+      "curve_unstability_mean_at_last_record": 93009.55,
+      "mean_cumulative_stable_regret": -662.3229916999128,
+      "max_cumulative_stable_regret": 1565.3608301819793
+    }
+  ],
+  "gap_panel_f": {
+    "AE_minus_CETC": 29203.25,
+    "PETC_minus_CETC": 76930.1
+  }
+}

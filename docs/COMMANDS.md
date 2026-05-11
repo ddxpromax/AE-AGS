@@ -26,7 +26,7 @@ Parallel:
 ./run_paper_default.sh --runs 20 --jobs 8
 ```
 
-**Appendix (f) C-ETC scale** (`c_etc_log_coeff≈8.35`): use `--preset paper_default --config configs/paper_default.json` instead of this script, or override the script’s preset/config on the CLI.
+**Appendix (f) C-ETC scale** (`c_etc_log_coeff≈8.35`): use **`--preset paper_appendix_e_fig1 --config configs/paper_appendix_e_fig1.json`** for Fig. 1 AE-AGS knobs aligned to full-horizon scans (README funnel: `cf=5`, `round_sweep`, `smallest_arm`, worst-stable regret). For theorem-style AE‑AGS (\(cf{=}6\), `pick_one`, `random`), keep **`paper_default`** / [`configs/paper_default.json`](configs/paper_default.json).
 
 ## C. Save trajectory JSON
 

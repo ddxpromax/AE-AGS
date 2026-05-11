@@ -1,0 +1,14 @@
+# scan N=5 K=5 T=25000 runs=5 seed=0 jobs=4 market=paper_rank c_etc=2.5
+cf	outer	jitter	schedule	pull_tb	ucb_ts	AE_unst	CETC_unst	AE-CETC
+5.0	pick_one	0.0	fixed	random	horizon	17570.0	10634.4	6935.6
+5.0	pick_one	0.0	fixed	smallest_arm	horizon	17697.6	10634.4	7063.2
+5.0	round_sweep	0.0	fixed	random	horizon	17644.6	10634.4	7010.2
+5.0	round_sweep	0.0	fixed	smallest_arm	horizon	17921.4	10634.4	7287.0
+5.5	pick_one	0.0	fixed	random	horizon	17780.6	10634.4	7146.2
+5.5	pick_one	0.0	fixed	smallest_arm	horizon	18036.0	10634.4	7401.6
+5.5	round_sweep	0.0	fixed	random	horizon	18161.0	10634.4	7526.6
+5.5	round_sweep	0.0	fixed	smallest_arm	horizon	18284.6	10634.4	7650.2
+6.0	pick_one	0.0	fixed	random	horizon	18196.8	10634.4	7562.4
+6.0	pick_one	0.0	fixed	smallest_arm	horizon	18145.6	10634.4	7511.2
+6.0	round_sweep	0.0	fixed	random	horizon	18409.6	10634.4	7775.2
+6.0	round_sweep	0.0	fixed	smallest_arm	horizon	18348.6	10634.4	7714.2

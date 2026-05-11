@@ -1,0 +1,50 @@
+{
+  "primary_goal": "C_knee15k",
+  "intentional_divergence_from_paper_appendix_e": [
+    {
+      "name": "stable_regret_reference_best",
+      "summary": "Panels (a)-(e) use best stable payoff per player (ablation); paper Eq. (1) uses worst stable."
+    },
+    {
+      "name": "c_etc_knee15k_scale",
+      "c_etc_log_coeff": 2.5,
+      "summary": "Short C-ETC exploration so cumulative-regret knee sits near ~15k (paper_fig1_knee15k). Appendix PDF panel (f) for C-ETC was tuned with a much larger effective exploration (this repo uses ~8.35 for that purpose in paper_default)."
+    }
+  ],
+  "implication_for_panel_f": "With θ=2.5 (knee15k), C-ETC commits early and often looks better on cumulative unstability than AE-AGS / P-ETC. For Appendix E style at θ≈8.35, use preset paper_appendix_e_fig1 (worst-stable regret, README funnel AE knobs); short runs can show high variance—prefer runs≥20.",
+  "tuning_under_knee15k": {
+    "ae_ags": "Run scan_fig1_knobs with --c-etc-log-coeff 2.5 and raise --T toward 100000 before trusting row order.",
+    "p_etc": "Co-tune --p-etc-explore-coef at fixed θ=2.5 (small grid); default 0.52 is not jointly optimized with knee15k vs AE-AGS."
+  },
+  "artifacts_knee15k_theta25": {
+    "knob_scan_table": "results/paper_run/plan_appendix_e/fig1_knob_scan_knee15k_T25k_r5.txt",
+    "scan_setting": "N=K=5 T=25000 runs=5 seed=0 jobs=4 market=paper_rank c_etc_log_coeff=2.5; grid cf in {5,5.5,6} × outer {pick_one,round_sweep} × pull_tb {random,smallest_arm}",
+    "lowest_AE_unst_row_T25000": {
+      "aeags_confidence_factor": 5.0,
+      "aeags_algo2_outer_loop": "pick_one",
+      "aeags_player_pull_tiebreak": "random",
+      "mean_AE_cumulative_unstability": 17570.0,
+      "mean_CETC_cumulative_unstability": 10634.4,
+      "note": "AE unstability remains well above C-ETC under knee15k; knobs only narrow the gap slightly."
+    },
+    "full_horizon_bestref_try_runs4": {
+      "save_json": "results/paper_run/plan_appendix_e/knee15k_bestref_ae_scanwinner_r4.json",
+      "setting": "paper_fig1_knee15k_best_stable_ref + ae pick_one + pull random + cf=5, T=100000, runs=4",
+      "cumulative_market_unstability_means_printed": {"AE-AGS": 41783, "C-ETC": 12235, "P-ETC": 84891}
+    },
+    "note_knee_ae_knobs": "Default knee15k configs/presets use aeags_algo2_outer_loop=pick_one and aeags_player_pull_tiebreak=random after θ=2.5 medium-T scans."
+  },
+  "reference_appendix_e_fig1_preset": {
+    "preset": "paper_appendix_e_fig1",
+    "command_note": "python -m ae_ags.run_experiment --preset paper_appendix_e_fig1 --config configs/paper_appendix_e_fig1.json --jobs 8 --record-every 1000 --save-json results/paper_run/appendix_e_fig1/paper_appendix_e_fig1.json"
+  },
+  "knee15k_diagnostic": {
+    "json_best_stable_ref": "results/paper_run/fig1_knee15k/one_run_curve_best_stable_ref.json",
+    "json_worst_stable_ref": "results/paper_run/fig1_knee15k/one_run_curve.json",
+    "observation": "cumulative_market_unstability means are identical for best vs worst stable_regret_reference; only regret panels change."
+  },
+  "reward_noise_mode": {
+    "current_knee15k_runs": "shared",
+    "note": "run_experiment supports independent per-algorithm streams via --reward-noise-mode independent (deterministic salt per policy). Confirm against the paper's experiment description; default shared keys noise by (seed,t,player,arm) when matchings agree."
+  }
+}

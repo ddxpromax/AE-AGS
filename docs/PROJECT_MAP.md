@@ -40,7 +40,7 @@ This document explains how the repository is organized and where to edit when ex
 
 ## 3) Config and Shell Scripts
 
-- `configs/paper_fig1_knee15k.json` (default Fig. 1 knee run), `configs/paper_default.json` (appendix (f) C-ETC scale).
+- `configs/paper_fig1_knee15k.json` (default Fig. 1 knee run), `configs/paper_default.json` (appendix θ scale, theorem-style AE), `configs/paper_appendix_e_fig1.json` (same θ, funnel AE for Fig. 1).
 
 - `scripts/parallel_defaults.sh`
   - Sourced by `run_paper_default.sh` and `run_appendix_e.sh`: default `OMP_NUM_THREADS=1` (and MKL/OpenBLAS mirrors) when unset, to pair with multi-process `--jobs`.

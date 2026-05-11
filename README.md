@@ -27,8 +27,9 @@ This repo focuses on:
 - `ae_ags/test_aeags_assign_order.py`: Algorithm 3 observe semantics + optional arm-rank jitter tie-break smoke (`python -m ae_ags.test_aeags_assign_order`).
 
 ### Config / scripts
-- `configs/paper_fig1_knee15k.json`: **default** single-setting paper run (`run_paper_default.sh`, `make paper-j8`): C-ETC `log_coeff` smaller so the regret knee is near \(\sim 10^4\)–\(2\times10^4\) rounds (Appendix Fig. 1 (a)–(e) visual default).
-- `configs/paper_default.json`: **appendix (f) scale** preset (`c_etc_log_coeff≈8.35`); use when you want C-ETC cumulative unstability aligned to the PDF’s panel (f) rather than the knee-15k regret layout.
+- `configs/paper_fig1_knee15k.json`: **default** single-setting paper run (`run_paper_default.sh`, `make paper-j8`): C-ETC `log_coeff` smaller so the regret knee is near \(\sim 10^4\)–\(2\times10^4\) rounds (Appendix Fig. 1 (a)–(e) visual default). AE-AGS uses `pick_one` + `pull_tiebreak=random` (+ `cf=5`) after medium‑\(T\) scans under \(\theta{=}2.5\).
+- `configs/paper_default.json`: **appendix C-ETC \(\theta\) scale** (`c_etc_log_coeff≈8.35`) with theorem-style AE-AGS (`cf=6`, `pick_one`, `random`).
+- `configs/paper_appendix_e_fig1.json`: same \(\theta\) as `paper_default` but AE-AGS uses **Fig. 1 funnel** knobs (`cf=5`, `round_sweep`, `smallest_arm`, worst-stable regret) — **`--preset paper_appendix_e_fig1`** — for closer Appendix E unstability/regret interplay at full horizon.
 - `run_paper_default.sh`: one-command run using **`paper_fig1_knee15k`** (override with `--preset` / `--config` if needed).
 - `run_appendix_e.sh`: one-command Appendix E sweep run.
 - [`scripts/fig1_funnel_scan.sh`](scripts/fig1_funnel_scan.sh): medium-\(T\) Cartesian scan for Fig. 1(f) knobs (writes [`results/paper_run/fig1_funnel_scan_t15000.txt`](results/paper_run/fig1_funnel_scan_t15000.txt)).

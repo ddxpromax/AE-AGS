@@ -9,10 +9,10 @@ Three objectives **trade off**; pick one as primary when tuning:
 | Primary goal | Preset / knobs | What you get | What you give up |
 |--------------|----------------|--------------|------------------|
 | C-ETC regret knee near ~15k in (a)–(e) | `paper_fig1_knee15k` (`c_etc_log_coeff≈2.5`) | Visual match for C-ETC regret shape | Panel (f) three-way layout vs PDF is **not** tuned; AE-AGS / P-ETC (f) can drift |
-| Appendix-scale (f) for C-ETC | `paper_default` (`c_etc_log_coeff≈8.35`) | C-ETC cumulative unstability near paper-reported rate | C-ETC regret knee stays near default paper curve, not 15k |
-| Show AE-AGS **beats** C-ETC on (f) | `paper_default` + funnel knobs (`scan_fig1_knobs` / `scripts/fig1_funnel_scan.sh`) | Empirical AE-AGS unstability &lt; C-ETC at same market noise | May need `aeags_confidence_factor≠6` (document as empirical, not theorem constant) |
+| Appendix-scale (f) for C-ETC | `paper_default` (`c_etc_log_coeff≈8.35`, AE theorem-style \(cf{=}6\)) | C-ETC unstability scale + paper Algorithm 3 coefficient in UCB/LCB | C-ETC regret knee not at ~15k; AE on (f) may be worse than funnel-tuned AE |
+| AE-AGS tuned for Appendix E Fig. 1 interplay | **`paper_appendix_e_fig1`** (`c_etc_log_coeff≈8.35`, **`cf=5`**, **`round_sweep`**, **`smallest_arm`**, worst-stable regret) | Uses README **full‑horizon funnel** knobs in one preset | **`cf≠6`** — empirical alignment, not the theorem line in Algorithm 3 |
 
-**Defaults in this repo:** single-setting paper runs (`run_paper_default.sh`, `make paper-json`) use **`paper_fig1_knee15k`** (regret knee ~15k). For panel **(f)** C-ETC scale or “AE-AGS vs C-ETC unstability” scans at \(\theta\approx 8.35\), switch to **`paper_default`** / `--c-etc-log-coeff 8.35` explicitly.
+**Defaults in this repo:** `run_paper_default.sh` / `make paper-json` keep **`paper_fig1_knee15k`** (regret knee ~15k). For Appendix E \(\theta\) at \(\approx 8.35\): use **`paper_appendix_e_fig1`** (funnel AE) or **`paper_default`** (theorem AE); both set `c_etc_log_coeff` consistently for C‑ETC.
 
 ## Q1 — Why cumulative stable regret can be negative
 
