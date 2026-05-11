@@ -14,13 +14,14 @@ paper-j8:
 	$(PARALLEL_BLAS) ./run_paper_default.sh --runs 20 --jobs 8
 
 paper-json:
-	$(PARALLEL_BLAS) ./run_paper_default.sh --runs 20 --jobs 8 --record-every 1000 --save-json results/paper_run/one_run_curve.json
+	mkdir -p results/paper_run/fig1_knee15k
+	$(PARALLEL_BLAS) ./run_paper_default.sh --runs 20 --jobs 8 --record-every 1000 --save-json results/paper_run/fig1_knee15k/one_run_curve.json
 
 paper-plot:
-	python -m ae_ags.plot_from_run_json --input-json results/paper_run/one_run_curve.json --output-dir results/paper_run/plots
+	python -m ae_ags.plot_from_run_json --input-json results/paper_run/fig1_knee15k/one_run_curve.json --output-dir results/paper_run/fig1_knee15k/plots
 
 paper-figure1:
-	python -m ae_ags.plot_from_run_json --input-json results/paper_run/one_run_curve.json --output-dir results/paper_run/plots --paper-figure1
+	python -m ae_ags.plot_from_run_json --input-json results/paper_run/fig1_knee15k/one_run_curve.json --output-dir results/paper_run/fig1_knee15k/plots --paper-figure1
 
 sweep:
 	./run_appendix_e.sh

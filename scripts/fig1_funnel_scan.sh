@@ -8,6 +8,7 @@ cd "$(dirname "$0")/.."
 
 python -m ae_ags.scan_fig1_knobs \
   --T 15000 --runs 10 --jobs 4 \
+  --c-etc-log-coeff 8.35 \
   --confidence-factors 5,5.5,6,6.5 \
   --algo2-outer-loops pick_one,round_sweep \
   --arm-schedules fixed \

@@ -12,7 +12,9 @@ cd /root/AE-AGS
 python -m ae_ags.run_experiment --preset quick
 ```
 
-## B. Paper default run
+## B. Paper default run (Fig. 1 knee ~15k)
+
+`run_paper_default.sh` uses **`paper_fig1_knee15k`** + [`configs/paper_fig1_knee15k.json`](configs/paper_fig1_knee15k.json).
 
 ```bash
 ./run_paper_default.sh
@@ -24,35 +26,38 @@ Parallel:
 ./run_paper_default.sh --runs 20 --jobs 8
 ```
 
+**Appendix (f) C-ETC scale** (`c_etc_log_coeff≈8.35`): use `--preset paper_default --config configs/paper_default.json` instead of this script, or override the script’s preset/config on the CLI.
+
 ## C. Save trajectory JSON
 
 ```bash
+mkdir -p results/paper_run/fig1_knee15k
 python -m ae_ags.run_experiment \
-  --preset paper_default \
+  --preset paper_fig1_knee15k --config configs/paper_fig1_knee15k.json \
   --runs 20 --jobs 8 \
   --record-every 1000 \
-  --save-json results/paper_run/one_run_curve.json
+  --save-json results/paper_run/fig1_knee15k/one_run_curve.json
 ```
 
 ## D. Plot from run JSON
 
 ```bash
 python -m ae_ags.plot_from_run_json \
-  --input-json results/paper_run/one_run_curve.json \
-  --output-dir results/paper_run/plots
+  --input-json results/paper_run/fig1_knee15k/one_run_curve.json \
+  --output-dir results/paper_run/fig1_knee15k/plots
 ```
 
 Appendix Figure 1 layout (panels (a)–(e) cumulative stable regret per player, (f) market unstability; AE-AGS / C-ETC / P-ETC only) requires a JSON produced by **current** `run_experiment` (includes `per_player_stable_regret_*` in each algorithm’s `curve`):
 
 ```bash
 python -m ae_ags.plot_from_run_json \
-  --input-json results/paper_run/one_run_curve.json \
-  --output-dir results/paper_run/plots \
+  --input-json results/paper_run/fig1_knee15k/one_run_curve.json \
+  --output-dir results/paper_run/fig1_knee15k/plots \
   --paper-figure1
-# -> results/paper_run/plots/figure1_paper_sixpanels.png
+# -> results/paper_run/fig1_knee15k/plots/figure1_paper_sixpanels.png
 ```
 
-Or: `python -m ae_ags.paper_figure1 --input-json results/paper_run/one_run_curve.json`
+Or: `python -m ae_ags.paper_figure1 --input-json results/paper_run/fig1_knee15k/one_run_curve.json`
 
 ## E. Full Appendix E sweep
 
@@ -87,7 +92,7 @@ export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 python -m ae_ags.run_experiment --preset paper_default --runs 20 --jobs 8
 ```
 
-Optional alignment with Appendix E baselines (defaults are in `configs/paper_default.json`):
+Optional alignment with Appendix E baselines at **(f) scale** (`configs/paper_default.json`):
 
 ```bash
 python -m ae_ags.run_experiment --preset paper_default \
@@ -109,13 +114,13 @@ Appendix E sanity (`jobs` parallelism vs `noise` coupling):
 ./scripts/ablation_noise_jobs.sh
 ```
 
-Fig. 1(f) knob grid (fast screen; add `--confidence-factors 5,5.5,6`, `--algo2-outer-loops pick_one,round_sweep`, optional `--seed-list 0,...,9`; increase `--T` / `--runs` for paper-scale):
+Fig. 1(f) knob grid (fast screen; add `--confidence-factors 5,5.5,6`, `--algo2-outer-loops pick_one,round_sweep`, optional `--seed-list 0,...,9`; increase `--T` / `--runs` for paper-scale). **Default** `scan_fig1_knobs` uses `--c-etc-log-coeff 2.5` (knee15k); pass **`--c-etc-log-coeff 8.35`** when scanning at appendix (f) scale.
 
 ```bash
 python -m ae_ags.scan_fig1_knobs --T 8000 --runs 8 --jobs 4 \
   --confidence-factors 6 --algo2-outer-loops pick_one,round_sweep
 
-# Full funnel (medium T) → results/paper_run/fig1_funnel_scan_t15000.txt
+# Full funnel at c_etc=8.35 (medium T) → results/paper_run/fig1_funnel_scan_t15000.txt
 ./scripts/fig1_funnel_scan.sh
 ```
 
@@ -130,13 +135,27 @@ python -m ae_ags.paper_figure1 --input-json results/paper_run/appendix_e_fig1_fu
   --output results/paper_run/plots/figure1_appendix_e_funnel_best_cf5_rs_sm.png
 ```
 
-Six-panel Fig. 1 with **C-ETC regret knee \(\sim 15\)k-ish** (smaller `--c-etc-log-coeff`, same AE funnel knobs) — artifacts under `results/paper_run/fig1_knee15k/`:
+Six-panel Fig. 1 at **default** knee15k layout — same as `./run_paper_default.sh --jobs 8 --record-every 1000 --save-json ...`:
 
 ```bash
-python -m ae_ags.run_experiment --preset paper_fig1_knee15k --jobs 8 --record-every 1000 \
+python -m ae_ags.run_experiment --preset paper_fig1_knee15k --config configs/paper_fig1_knee15k.json --jobs 8 --record-every 1000 \
   --save-json results/paper_run/fig1_knee15k/one_run_curve.json
 python -m ae_ags.paper_figure1 --input-json results/paper_run/fig1_knee15k/one_run_curve.json \
   --output results/paper_run/fig1_knee15k/plots/figure1_sixpanels.png
+```
+
+**Nonnegative cumulative stable regret (panels (a)–(e))** — same hyperparameters as `paper_default` / `paper_fig1_knee15k`, but per-step regret is `max(μ_ref−X,0)` (`rectify_regret=true`, no `clip_rewards`):
+
+```bash
+python -m ae_ags.run_experiment --preset paper_default_rectified --jobs 8 --record-every 1000 \
+  --save-json results/paper_run/plots/figure1_paper_default_rectified.json
+python -m ae_ags.paper_figure1 --input-json results/paper_run/plots/figure1_paper_default_rectified.json \
+  --output results/paper_run/plots/figure1_paper_default_rectified.png
+
+python -m ae_ags.run_experiment --preset paper_fig1_knee15k_rectified --jobs 8 --record-every 1000 \
+  --save-json results/paper_run/fig1_knee15k/one_run_curve_rectified.json
+python -m ae_ags.paper_figure1 --input-json results/paper_run/fig1_knee15k/one_run_curve_rectified.json \
+  --output results/paper_run/fig1_knee15k/plots/figure1_sixpanels_rectified.png
 ```
 
 ## G. Git workflow

@@ -1,8 +1,9 @@
 """
 Grid scan for Appendix Fig.1 knobs (AE-AGS vs C-ETC unstability).
 
-Example (fast screen): --T 8000 --runs 8 --record-every 0
-Paper-scale check: inherit from paper_default and pass --T 100000 --runs 20 ...
+Example (fast screen): ``--T 8000 --runs 8 --record-every 0``.
+
+Default ``--c-etc-log-coeff`` is **2.5** (same as ``paper_fig1_knee15k``). For appendix Fig.1(f) C-ETC scale use ``--c-etc-log-coeff 8.35``. For heavier paper-scale grids add e.g. ``--T 100000 --runs 20``.
 
 Also supports:
 - Comma lists for --confidence-factors and --algo2-outer-loops (product with other axes).
@@ -139,7 +140,12 @@ def main() -> None:
         default="6",
         help="Comma-separated aeags_confidence_factor values (theorem uses 6; other values are empirical knob search).",
     )
-    parser.add_argument("--c-etc-log-coeff", type=float, default=8.35)
+    parser.add_argument(
+        "--c-etc-log-coeff",
+        type=float,
+        default=2.5,
+        help="C-ETC log coeff (default 2.5 = paper_fig1_knee15k; use 8.35 for appendix Fig.1(f) scale).",
+    )
     parser.add_argument("--p-etc-explore-coef", type=float, default=0.52)
     parser.add_argument("--reward-noise-mode", type=str, default="shared")
     parser.add_argument(

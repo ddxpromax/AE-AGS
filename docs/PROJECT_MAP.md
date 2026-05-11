@@ -10,7 +10,7 @@ This document explains how the repository is organized and where to edit when ex
   - `python -m ae_ags.plot_from_run_json`
 
 - `run_paper_default.sh`
-  - One-command wrapper for paper default run.
+  - One-command wrapper: **`paper_fig1_knee15k`** (Fig. 1 regret knee default). For appendix (f) C-ETC scale use `paper_default` + `configs/paper_default.json` explicitly.
 
 - `run_appendix_e.sh`
   - One-command wrapper for paper-scale Appendix E sweeps.
@@ -40,14 +40,10 @@ This document explains how the repository is organized and where to edit when ex
 
 ## 3) Config and Shell Scripts
 
-- `configs/paper_default.json`
-  - Default paper-scale parameters.
+- `configs/paper_fig1_knee15k.json` (default Fig. 1 knee run), `configs/paper_default.json` (appendix (f) C-ETC scale).
 
 - `scripts/parallel_defaults.sh`
   - Sourced by `run_paper_default.sh` and `run_appendix_e.sh`: default `OMP_NUM_THREADS=1` (and MKL/OpenBLAS mirrors) when unset, to pair with multi-process `--jobs`.
-
-- `run_paper_default.sh`
-  - Wrapper over `python -m ae_ags.run_experiment` with paper default config.
 
 - `run_appendix_e.sh`
   - Wrapper over `python -m ae_ags.sweep_appendix_e` with paper-scale sweep parameters.
