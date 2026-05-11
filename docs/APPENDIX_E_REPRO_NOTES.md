@@ -30,6 +30,8 @@ If you want cumulative stable regret trajectories to stay **nonnegative** while 
 
 This is **not** identical to the strict paper Eq. (1) sum; it is a reproducibility knob for figure shape. **`paper_clean`** turns on rectification **and** `clip_rewards`, which changes the reward process as well.
 
+**Canonical paths (knee15k, rectified):** `results/paper_run/fig1_knee15k/one_run_curve_rectified.json` and `results/paper_run/fig1_knee15k/plots/figure1_sixpanels_rectified.png` — use `make paper-json-rectified` and `make paper-figure1-rectified`.
+
 **Verify locally:**
 
 ```bash

@@ -144,18 +144,22 @@ python -m ae_ags.paper_figure1 --input-json results/paper_run/fig1_knee15k/one_r
   --output results/paper_run/fig1_knee15k/plots/figure1_sixpanels.png
 ```
 
-**Nonnegative cumulative stable regret (panels (a)–(e))** — same hyperparameters as `paper_default` / `paper_fig1_knee15k`, but per-step regret is `max(μ_ref−X,0)` (`rectify_regret=true`, no `clip_rewards`):
+**Nonnegative cumulative stable regret (panels (a)–(e))** — per-step regret is `max(μ_ref−X,0)` (`rectify_regret=true`, no `clip_rewards`). **Default knee15k** artifacts always live next to `figure1_sixpanels.png`:
+
+```bash
+make paper-json-rectified
+make paper-figure1-rectified
+# -> results/paper_run/fig1_knee15k/one_run_curve_rectified.json
+# -> results/paper_run/fig1_knee15k/plots/figure1_sixpanels_rectified.png
+```
+
+Appendix **(f) scale** (`paper_default_rectified`) if needed:
 
 ```bash
 python -m ae_ags.run_experiment --preset paper_default_rectified --jobs 8 --record-every 1000 \
   --save-json results/paper_run/plots/figure1_paper_default_rectified.json
 python -m ae_ags.paper_figure1 --input-json results/paper_run/plots/figure1_paper_default_rectified.json \
   --output results/paper_run/plots/figure1_paper_default_rectified.png
-
-python -m ae_ags.run_experiment --preset paper_fig1_knee15k_rectified --jobs 8 --record-every 1000 \
-  --save-json results/paper_run/fig1_knee15k/one_run_curve_rectified.json
-python -m ae_ags.paper_figure1 --input-json results/paper_run/fig1_knee15k/one_run_curve_rectified.json \
-  --output results/paper_run/fig1_knee15k/plots/figure1_sixpanels_rectified.png
 ```
 
 ## G. Git workflow

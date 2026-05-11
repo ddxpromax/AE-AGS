@@ -35,7 +35,7 @@ This repo focuses on:
 
 ### Outputs
 - `results/paper_run/`: paper default run outputs (older Fig. 1 PNGs also live under `results/paper_run/plots/`).
-- [`results/paper_run/fig1_knee15k/plots/`](results/paper_run/fig1_knee15k/plots/): **default** location for six-panel Fig. 1 JSON/PNGs from `run_paper_default.sh` / `make paper-json` (`paper_fig1_knee15k`). Then `paper_figure1` (see [`docs/COMMANDS.md`](docs/COMMANDS.md)).
+- [`results/paper_run/fig1_knee15k/plots/`](results/paper_run/fig1_knee15k/plots/): **default** location for Appendix Fig. 1 six-panels: raw regret from `run_paper_default.sh` / `make paper-json` → `one_run_curve.json` + `figure1_sixpanels.png` (via `paper_figure1` or `make paper-figure1`); **nonnegative-regret** (`paper_fig1_knee15k_rectified`) → `one_run_curve_rectified.json` + **`figure1_sixpanels_rectified.png`** (`make paper-json-rectified` then `make paper-figure1-rectified`). See [`docs/COMMANDS.md`](docs/COMMANDS.md).
 - `results/appendix_e_full/`: Appendix E sweep outputs.
 
 **Algorithm 2 `A_i` fix (incumbent tentative match included when comparing proposals):** after this correction, Fig. 1 curves at **`paper_default`** with **theorem-scale** `aeags_confidence_factor=6`, `pick_one`, `pull_tiebreak=random` still show **AE-AGS cumulative unstability \(\approx 5.0\times 10^4\)** vs **C-ETC \(\approx 4.3\times 10^4\)** (`appendix_e_fig1_pick_one.json` / `figure1_appendix_e_pick_one.png`). A **two-stage funnel** on medium \(T\) (see `results/paper_run/fig1_funnel_scan_t15000.txt`) picked **`aeags_confidence_factor=5`**, **`round_sweep`**, **`smallest_arm`**, **`aeags_arm_rank_jitter_scale=0`**: at full **`paper_default`** length this yields **AE-AGS \(\approx 4.22\times 10^4\)** vs **C-ETC \(\approx 4.33\times 10^4\)** (`appendix_e_fig1_funnel_best_cf5_rs_sm.json`, `figure1_appendix_e_funnel_best_cf5_rs_sm.png`). That **\(5\neq 6\)** combination is **empirical Fig. 1 alignment**, not the theorem’s confidence constant. For **theorem \(6\)** with the same outer/tie-break but full \(T\), see `appendix_e_fig1_cf6_round_sweep_smallest_arm.json`. Older JSON from before the `A_i` change should not be cited as current code.
@@ -189,10 +189,12 @@ To scan coefficients, rerun with different `--c-etc-log-coeff` (each run writes 
   - `clip_rewards=0`
   - `rectify_regret=0`
 - Negative sampled rewards / cumulative regrets can therefore appear and are expected.
-- For an engineering-style nonnegative cumulative regret (panels (a)–(e)) without reward clipping:
+- For an engineering-style nonnegative cumulative regret (panels (a)–(e)) without reward clipping (default knee15k layout; artifacts under `fig1_knee15k/plots/`):
 ```bash
-python -m ae_ags.run_experiment --preset paper_default_rectified --jobs 8 --save-json results/paper_run/fig1_rectified.json
-python -m ae_ags.paper_figure1 --input-json results/paper_run/fig1_rectified.json --output results/paper_run/plots/figure1_rectified.png
+make paper-json-rectified
+make paper-figure1-rectified
+# -> results/paper_run/fig1_knee15k/one_run_curve_rectified.json
+# -> results/paper_run/fig1_knee15k/plots/figure1_sixpanels_rectified.png
 ```
 - `paper_clean` additionally clips rewards:
 ```bash
@@ -205,7 +207,7 @@ python -m ae_ags.run_experiment --preset paper_clean
 
 - `docs/PROJECT_MAP.md`: architecture and file responsibilities.
 - `docs/COMMANDS.md`: copy-paste command handbook.
-- `Makefile`: short aliases (`make quick`, `make paper-j8`, `make sweep`).
+- `Makefile`: short aliases (`make quick`, `make paper-j8`, `make paper-json-rectified`, `make sweep`).
 
 ---
 
